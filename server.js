@@ -5,6 +5,7 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 const tls = require('tls');
+const crypto = require('crypto');
 const { URL } = require('url');
 
 const app = express();
@@ -310,27 +311,72 @@ async function checkSSLCertificate(hostname, port) {
                 const cert = socket.getPeerCertificate(true); // Get detailed certificate info
                 const protocol = socket.getProtocol();
                 
-                // Extract signature algorithm with fallbacks
+                // Extract signature algorithm with multiple fallback methods
                 let signatureAlgorithm = 'Unknown';
+                
+                // Method 1: Direct sigalg property
                 if (cert.sigalg) {
                     signatureAlgorithm = cert.sigalg;
-                } else if (cert.signatureAlgorithm) {
+                }
+                // Method 2: Alternative property names
+                else if (cert.signatureAlgorithm) {
                     signatureAlgorithm = cert.signatureAlgorithm;
-                } else if (cert.serialNumber && cert.raw) {
-                    // Try to extract from certificate data
+                }
+                // Method 3: Check if it's in the subject or issuer objects
+                else if (cert.subject && cert.subject.signatureAlgorithm) {
+                    signatureAlgorithm = cert.subject.signatureAlgorithm;
+                }
+                else if (cert.issuer && cert.issuer.signatureAlgorithm) {
+                    signatureAlgorithm = cert.issuer.signatureAlgorithm;
+                }
+                // Method 5: Try using crypto module to get more certificate details
+                else if (cert.raw) {
                     try {
-                        const certDetails = socket.getPeerCertificate(true);
-                        if (certDetails.infoAccess || certDetails.ext_key_usage) {
-                            signatureAlgorithm = 'Available in certificate';
+                        // Try to create X509Certificate object for more detailed information
+                        const x509 = new crypto.X509Certificate(cert.raw);
+                        if (x509.signatureAlgorithm) {
+                            signatureAlgorithm = x509.signatureAlgorithm;
                         }
                     } catch (e) {
-                        console.log('Could not extract detailed certificate info:', e.message);
+                        console.log('Could not parse certificate with crypto.X509Certificate:', e.message);
+                        
+                        // Fallback: Try to infer from available data
+                        try {
+                            const certString = cert.toString ? cert.toString() : '';
+                            if (certString.includes('sha256')) {
+                                signatureAlgorithm = 'sha256WithRSAEncryption';
+                            } else if (certString.includes('sha1')) {
+                                signatureAlgorithm = 'sha1WithRSAEncryption';
+                            } else if (certString.includes('sha384')) {
+                                signatureAlgorithm = 'sha384WithRSAEncryption';
+                            } else if (certString.includes('sha512')) {
+                                signatureAlgorithm = 'sha512WithRSAEncryption';
+                            }
+                        } catch (e2) {
+                            console.log('Could not parse certificate string:', e2.message);
+                        }
+                    }
+                }
+                // Method 6: Check for specific algorithm indicators in the certificate
+                else if (cert.serialNumber && cert.fingerprint) {
+                    // If we have fingerprint, we can often infer the hash algorithm
+                    if (cert.fingerprint256) {
+                        signatureAlgorithm = 'Likely SHA-256 based (inferred from fingerprint)';
+                    } else if (cert.fingerprint) {
+                        signatureAlgorithm = 'Likely SHA-1 based (inferred from fingerprint)';
                     }
                 }
                 
-                // Debug log for troubleshooting
+                // Debug log for troubleshooting - show all available properties
                 console.log('Certificate properties available:', Object.keys(cert));
-                console.log('Signature algorithm found:', signatureAlgorithm);
+                console.log('Certificate sigalg property:', cert.sigalg);
+                console.log('Certificate signatureAlgorithm property:', cert.signatureAlgorithm);
+                console.log('Final signature algorithm found:', signatureAlgorithm);
+                
+                // Additional debug - log some certificate details
+                if (cert.fingerprint) console.log('Certificate fingerprint (SHA-1):', cert.fingerprint);
+                if (cert.fingerprint256) console.log('Certificate fingerprint (SHA-256):', cert.fingerprint256);
+                if (cert.fingerprint512) console.log('Certificate fingerprint (SHA-512):', cert.fingerprint512);
                 
                 const gradeInfo = calculateSSLGrade(cert, protocol, socket.authorized, signatureAlgorithm);
                 
@@ -490,21 +536,32 @@ function calculateSSLGrade(cert, protocol, authorized, signatureAlgorithm = null
     // Signature algorithm analysis - use provided parameter or fallback to cert property
     const sigAlg = signatureAlgorithm || cert.sigalg || '';
     if (sigAlg && sigAlg !== 'Unknown') {
-        if (sigAlg.includes('SHA256') || sigAlg.includes('SHA384') || sigAlg.includes('SHA512')) {
+        // Check for various SHA algorithms
+        if (sigAlg.toLowerCase().includes('sha256') || sigAlg.toLowerCase().includes('sha-256')) {
             score += 20;
-        } else if (sigAlg.includes('SHA1')) {
+        } else if (sigAlg.toLowerCase().includes('sha384') || sigAlg.toLowerCase().includes('sha-384')) {
+            score += 20;
+        } else if (sigAlg.toLowerCase().includes('sha512') || sigAlg.toLowerCase().includes('sha-512')) {
+            score += 20;
+        } else if (sigAlg.toLowerCase().includes('sha1') || sigAlg.toLowerCase().includes('sha-1')) {
             issues.push('Using deprecated SHA-1 signature algorithm');
             recommendations.push('Upgrade to SHA-256 or higher signature algorithm');
-        } else if (sigAlg.includes('MD5')) {
+        } else if (sigAlg.toLowerCase().includes('md5')) {
             issues.push('Using insecure MD5 signature algorithm');
             recommendations.push('Immediately upgrade to SHA-256 or higher - MD5 is cryptographically broken');
-        } else if (sigAlg.toLowerCase() !== 'available in certificate') {
+        } else if (sigAlg.toLowerCase().includes('likely') || sigAlg.toLowerCase().includes('inferred')) {
+            // For inferred algorithms, give partial credit
+            if (sigAlg.toLowerCase().includes('sha-256') || sigAlg.toLowerCase().includes('sha256')) {
+                score += 15; // Partial credit for inferred SHA-256
+                issues.push('Signature algorithm inferred (likely secure but not definitively extracted)');
+            } else if (sigAlg.toLowerCase().includes('sha-1') || sigAlg.toLowerCase().includes('sha1')) {
+                score += 5; // Minimal credit for inferred SHA-1
+                issues.push('Signature algorithm appears to be SHA-1 (deprecated)');
+                recommendations.push('Upgrade to SHA-256 or higher signature algorithm');
+            }
+        } else {
             issues.push(`Unknown signature algorithm: ${sigAlg}`);
             recommendations.push('Verify signature algorithm is secure (SHA-256 or higher)');
-        } else {
-            // Certificate has signature algorithm but we couldn't extract the specific type
-            score += 10; // Give partial credit
-            issues.push('Signature algorithm present but details not extracted');
         }
     } else {
         issues.push('Signature algorithm information unavailable - this may indicate an issue with certificate analysis');
