@@ -10,7 +10,14 @@
     "postinstall": "echo 'Dependencies installed successfully!'",
     "serve": "npm start",
     "clean": "rimraf build",
-    "prebuild": "npm run clean"
+    "prebuild": "npm run clean",
+    "test": "npm run test:integration",
+    "test:integration": "node test/integration/test-runner.js",
+    "test:ssl": "node test/integration/test-runner.js ssl",
+    "test:headers": "node test/integration/test-runner.js headers",
+    "test:additional": "node test/integration/test-runner.js additional",
+    "test:performance": "node test/integration/test-runner.js performance",
+    "test:legacy": "node test/integration.test.js"
   },
   "keywords": [
     "security",

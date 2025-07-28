@@ -81,6 +81,21 @@ class SecurityChecker {
             }
 
             const results = await response.json();
+            
+            // Transform API response to match frontend expectations
+            if (results.details) {
+                return {
+                    url: results.analysis?.url || url,
+                    domain: this.extractDomain(url),
+                    timestamp: results.analysis?.timestamp || new Date().toISOString(),
+                    ssl: results.details.ssl || {},
+                    headers: results.details.headers?.headers || [],
+                    additional: results.details.additional?.checks || [],
+                    score: results.security?.score || 0,
+                    security: results.security || {}
+                };
+            }
+            
             return results;
         } catch (error) {
             console.error('Error calling API:', error);

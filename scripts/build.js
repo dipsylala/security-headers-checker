@@ -8,6 +8,7 @@ const SOURCE_FILES = [
     'index.html',
     'css/',
     'js/',
+    'lib/',
     'README.md'
 ];
 

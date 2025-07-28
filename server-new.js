@@ -32,7 +32,7 @@ app.get('/', (req, res) => {
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
     res.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
@@ -48,7 +48,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Main security analysis endpoint
-app.post('/api/analyze', async (req, res) => {
+app.post('/analyze', async (req, res) => {
     const startTime = Date.now();
     
     try {
@@ -112,19 +112,10 @@ app.post('/api/analyze', async (req, res) => {
         
         // Step 3: Calculate overall security score
         const scores = {
-            ssl: {
-                score: results.ssl.score || 0,
-                maxScore: results.ssl.maxScore || 100
-            },
-            headers: {
-                score: results.headers.score?.normalizedScore || results.headers.score?.score || 0,
-                maxScore: 100 // Headers are already normalized to 0-100 via normalizedScore
-            },
-            additional: results.additional.score || { score: 0, maxScore: 10 },
-            accessibility: {
-                score: urlAssessment.score || 5,
-                maxScore: urlAssessment.maxScore || 10
-            }
+            ssl: results.ssl.score || 0,
+            headers: results.headers.score || 0,
+            additional: results.additional.score || 0,
+            accessibility: urlAssessment.score || 5
         };
         
         const securityAssessment = generateSecurityAssessment(scores, {
@@ -183,7 +174,7 @@ app.get('/api-docs', (req, res) => {
         version: '1.0.0',
         description: 'Comprehensive security analysis for web applications',
         endpoints: {
-            'POST /api/analyze': {
+            'POST /analyze': {
                 description: 'Perform comprehensive security analysis',
                 parameters: {
                     url: {
@@ -199,7 +190,7 @@ app.get('/api-docs', (req, res) => {
                     warnings: 'Any warnings about the analysis'
                 }
             },
-            'GET /api/health': {
+            'GET /health': {
                 description: 'Health check endpoint',
                 response: {
                     status: 'Application health status',
@@ -234,8 +225,8 @@ app.use('/api/*', (req, res) => {
     res.status(404).json({
         error: 'API endpoint not found',
         availableEndpoints: [
-            'POST /api/analyze',
-            'GET /api/health',
+            'POST /analyze',
+            'GET /health',
             'GET /api-docs'
         ]
     });
@@ -261,7 +252,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`🚀 Security Headers Checker running on http://localhost:${PORT}`);
     console.log(`📊 API documentation available at http://localhost:${PORT}/api-docs`);
-    console.log(`🏥 Health check available at http://localhost:${PORT}/api/health`);
+    console.log(`🏥 Health check available at http://localhost:${PORT}/health`);
     console.log(`📁 Serving static files from current directory`);
     
     // Log loaded modules
