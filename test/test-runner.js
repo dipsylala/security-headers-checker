@@ -4,7 +4,7 @@
  */
 
 const { runSSLTests } = require('./integration/ssl-certificate.test.js');
-const { runEnhancedSSLTests } = require('./integration/enhanced-ssl.test.js');
+const { runComprehensiveSSLTests } = require('./integration/comprehensive-ssl.test.js');
 const { runHeadersTests } = require('./integration/security-headers.test.js');
 const { runAdditionalChecksTests } = require('./integration/additional-checks.test.js');
 const { runPerformanceTests } = require('./integration/performance.test.js');
@@ -54,7 +54,7 @@ async function runAllTests() {
         // Run Enhanced SSL Tests
         console.log('\n🔐 Running Enhanced SSL Tests...');
         console.log('-'.repeat(40));
-        const enhancedSslTestResults = await runEnhancedSSLTests();
+        const enhancedSslTestResults = await runComprehensiveSSLTests();
 
         if (enhancedSslTestResults.passed > 0) {
             results.enhancedSsl.passed += enhancedSslTestResults.passed;

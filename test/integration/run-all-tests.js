@@ -9,6 +9,7 @@ const { runSSLTests } = require('./ssl-certificate.test.js');
 const { runHeadersTests } = require('./security-headers.test.js');
 const { runAdditionalChecksTests } = require('./additional-checks.test.js');
 const { runBadSSLTests } = require('./badssl-scenarios.test.js');
+const { runComprehensiveSSLTests } = require('./comprehensive-ssl.test.js');
 
 async function runAllIntegrationTests() {
     console.log('🚀 Starting Comprehensive Integration Test Suite...\n');
@@ -36,8 +37,14 @@ async function runAllIntegrationTests() {
         const additionalResults = await runAdditionalChecksTests();
         allResults.push({ phase: 'Additional Checks', results: additionalResults });
         
-        // Test 4: BadSSL Certificate Scenarios
-        console.log('\n📋 Phase 4: BadSSL Certificate Error Scenarios');
+        // Test 4: Comprehensive SSL Analysis Tests
+        console.log('\n📋 Phase 4: Comprehensive SSL Analysis Tests');
+        console.log('-'.repeat(40));
+        const comprehensiveSSLResults = await runComprehensiveSSLTests();
+        allResults.push({ phase: 'Comprehensive SSL', results: comprehensiveSSLResults });
+        
+        // Test 5: BadSSL Certificate Scenarios
+        console.log('\n📋 Phase 5: BadSSL Certificate Error Scenarios');
         console.log('-'.repeat(40));
         const badSSLResults = await runBadSSLTests();
         allResults.push({ phase: 'BadSSL Scenarios', results: badSSLResults });
@@ -59,21 +66,38 @@ async function runAllIntegrationTests() {
     let totalPassed = 0;
     
     allResults.forEach(phase => {
-        const passed = phase.results.filter(r => r.passed).length;
-        const total = phase.results.length;
-        totalTests += total;
-        totalPassed += passed;
-        
-        console.log(`📊 ${phase.phase}: ${passed}/${total} passed`);
+        // Handle different result formats
+        if (Array.isArray(phase.results)) {
+            // Array format (SSL, Headers, Additional, BadSSL)
+            const passed = phase.results.filter(r => r.passed).length;
+            const total = phase.results.length;
+            totalTests += total;
+            totalPassed += passed;
+            console.log(`📊 ${phase.phase}: ${passed}/${total} passed`);
+        } else if (phase.results && typeof phase.results === 'object' && 'passed' in phase.results) {
+            // Object format (Comprehensive SSL)
+            const passed = phase.results.passed;
+            const total = phase.results.total || (phase.results.passed + phase.results.failed);
+            totalTests += total;
+            totalPassed += passed;
+            console.log(`📊 ${phase.phase}: ${passed}/${total} passed`);
+        }
     });
     
     console.log(`\n⏱️  Total Execution Time: ${duration}s`);
     console.log(`📈 Overall Success Rate: ${totalPassed}/${totalTests} (${Math.round(totalPassed/totalTests*100)}%)`);
     
     // Detailed Failure Analysis
-    const failures = allResults.flatMap(phase => 
-        phase.results.filter(r => !r.passed).map(r => ({ ...r, phase: phase.phase }))
-    );
+    const failures = allResults.flatMap(phase => {
+        if (Array.isArray(phase.results)) {
+            // Array format - filter failed tests
+            return phase.results.filter(r => !r.passed).map(r => ({ ...r, phase: phase.phase }));
+        } else if (phase.results && typeof phase.results === 'object' && phase.results.failed > 0) {
+            // Object format - create a failure entry if there are failed tests
+            return [{ test: `${phase.phase} tests`, phase: phase.phase, error: `${phase.results.failed} tests failed` }];
+        }
+        return [];
+    });
     
     if (failures.length > 0) {
         console.log(`\n❌ Failed Tests (${failures.length}):`);
@@ -95,10 +119,19 @@ async function runAllIntegrationTests() {
     
     // SSL Analysis Coverage
     const sslAnalysisResults = allResults.find(p => p.phase === 'SSL Certificates')?.results || [];
+    const comprehensiveSSLAnalysisResults = allResults.find(p => p.phase === 'Comprehensive SSL')?.results;
     const badSSLAnalysisResults = allResults.find(p => p.phase === 'BadSSL Scenarios')?.results || [];
     
     console.log(`🔒 SSL Certificate Analysis:`);
     console.log(`   • Normal certificates: ${sslAnalysisResults.filter(r => r.passed).length}/${sslAnalysisResults.length}`);
+    
+    // Handle comprehensive SSL results (object format)
+    if (comprehensiveSSLAnalysisResults && typeof comprehensiveSSLAnalysisResults === 'object') {
+        console.log(`   • Comprehensive analysis: ${comprehensiveSSLAnalysisResults.passed}/${comprehensiveSSLAnalysisResults.total || (comprehensiveSSLAnalysisResults.passed + comprehensiveSSLAnalysisResults.failed)}`);
+    } else {
+        console.log(`   • Comprehensive analysis: 0/0`);
+    }
+    
     console.log(`   • Error scenarios: ${badSSLAnalysisResults.filter(r => r.passed).length}/${badSSLAnalysisResults.length}`);
     
     // Headers Analysis Coverage
