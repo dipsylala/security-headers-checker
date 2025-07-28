@@ -10,10 +10,110 @@ const { runHeadersTests } = require('./security-headers.test.js');
 const { runAdditionalChecksTests } = require('./additional-checks.test.js');
 const { runBadSSLTests } = require('./badssl-scenarios.test.js');
 const { runComprehensiveSSLTests } = require('./comprehensive-ssl.test.js');
+const http = require('http');
+
+/**
+ * Check if the Security Headers Checker server is running
+ * @returns {Promise<boolean>} True if server is running and responding
+ */
+async function checkServerHealth() {
+    return new Promise((resolve) => {
+        const options = {
+            hostname: 'localhost',
+            port: 3000,
+            path: '/health',
+            method: 'GET',
+            timeout: 5000 // 5 second timeout
+        };
+
+        const req = http.request(options, (res) => {
+            // Any response (even 404) means server is running
+            resolve(true);
+        });
+
+        req.on('error', (error) => {
+            // Connection refused, server not running
+            resolve(false);
+        });
+
+        req.on('timeout', () => {
+            req.destroy();
+            resolve(false);
+        });
+
+        req.end();
+    });
+}
+
+/**
+ * Attempt to check server with a simple API call
+ * @returns {Promise<boolean>} True if server responds to API calls
+ */
+async function checkServerAPI() {
+    return new Promise((resolve) => {
+        const postData = JSON.stringify({ url: 'https://example.com' });
+        
+        const options = {
+            hostname: 'localhost',
+            port: 3000,
+            path: '/api/analyze',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(postData)
+            },
+            timeout: 10000 // 10 second timeout for API call
+        };
+
+        const req = http.request(options, (res) => {
+            // Any response means server is responding to API calls
+            resolve(true);
+        });
+
+        req.on('error', (error) => {
+            resolve(false);
+        });
+
+        req.on('timeout', () => {
+            req.destroy();
+            resolve(false);
+        });
+
+        req.write(postData);
+        req.end();
+    });
+}
 
 async function runAllIntegrationTests() {
     console.log('🚀 Starting Comprehensive Integration Test Suite...\n');
     console.log('=' .repeat(60));
+    
+    // Server Health Check
+    console.log('🔍 Checking server health...');
+    const serverRunning = await checkServerHealth();
+    
+    if (!serverRunning) {
+        console.error('❌ Server is not running on localhost:3000');
+        console.error('💡 Please start the server with: npm start or npm run dev');
+        console.error('🛑 Integration tests require the server to be running\n');
+        process.exit(1);
+    }
+    
+    console.log('✅ Server is running on localhost:3000');
+    
+    // API Health Check
+    console.log('🔍 Checking API endpoint...');
+    const apiWorking = await checkServerAPI();
+    
+    if (!apiWorking) {
+        console.error('❌ API endpoint /api/analyze is not responding');
+        console.error('💡 Server may be starting up, please wait a moment and try again');
+        console.error('🛑 Integration tests require the API to be working\n');
+        process.exit(1);
+    }
+    
+    console.log('✅ API endpoint is responding correctly');
+    console.log('🎯 All pre-flight checks passed - starting integration tests...\n');
     
     const startTime = Date.now();
     const allResults = [];

@@ -14,6 +14,7 @@ const { checkSSLCertificate, analyzeSSLCertificateDetailed } = require('./lib/ss
 const { checkSecurityHeaders } = require('./lib/headers-checker');
 const { performAdditionalChecks } = require('./lib/additional-checks');
 const { generateSecurityAssessment } = require('./lib/scoring-system');
+const { checkReachabilityWithRetry, getReachabilitySuggestions } = require('./lib/reachability-checker');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -81,7 +82,30 @@ app.post('/api/analyze', async (req, res) => {
         const validatedUrl = urlValidation.url;
         const urlAssessment = getUrlSecurityAssessment(validatedUrl);
 
-        // Step 2: Perform parallel security checks
+        // Step 2: Check reachability before expensive operations
+        console.log(`[${new Date().toISOString()}] Checking reachability...`);
+        const reachabilityResult = await checkReachabilityWithRetry(validatedUrl, 1, 5000); // 1 retry, 5s timeout
+        
+        if (!reachabilityResult.reachable) {
+            const suggestions = getReachabilitySuggestions(reachabilityResult);
+            
+            return res.status(503).json({
+                error: 'Host unreachable',
+                message: reachabilityResult.message,
+                details: reachabilityResult.technicalDetails || 'Unable to establish connection to the target host',
+                reachability: {
+                    status: reachabilityResult.finalStatus,
+                    errorType: reachabilityResult.errorType,
+                    attempts: reachabilityResult.totalAttempts,
+                    responseTime: reachabilityResult.responseTime
+                },
+                suggestions: suggestions
+            });
+        }
+        
+        console.log(`[${new Date().toISOString()}] Host reachable (${reachabilityResult.responseTime}ms) - proceeding with security analysis...`);
+
+        // Step 3: Perform parallel security checks
         console.log(`[${new Date().toISOString()}] Performing security checks...`);
 
         // Extract hostname for detailed SSL analysis
@@ -100,6 +124,11 @@ app.post('/api/analyze', async (req, res) => {
         const results = {
             url: validatedUrl,
             urlAssessment: urlAssessment,
+            reachability: {
+                status: reachabilityResult.finalStatus,
+                responseTime: reachabilityResult.responseTime,
+                attempts: reachabilityResult.totalAttempts
+            },
             ssl: sslResult.status === 'fulfilled' ? sslResult.value : {
                 error: sslResult.reason?.message || 'SSL check failed',
                 grade: 'F',

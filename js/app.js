@@ -1,4 +1,22 @@
 // Security Headers Checker Application
+
+// Custom error classes for better error handling
+class ReachabilityError extends Error {
+    constructor(data) {
+        super(data.message || 'Host unreachable');
+        this.name = 'ReachabilityError';
+        this.data = data;
+    }
+}
+
+class ValidationError extends Error {
+    constructor(data) {
+        super(data.details || data.error || 'Validation failed');
+        this.name = 'ValidationError';
+        this.data = data;
+    }
+}
+
 class SecurityChecker {
     constructor() {
         this.currentResults = null;
@@ -25,12 +43,27 @@ class SecurityChecker {
         this.showLoading();
 
         try {
-            // Simulate API call - in real implementation, this would call your backend
+            // Perform security checks via API
             const results = await this.performSecurityChecks(urlInput);
             this.currentResults = results;
             this.displayResults(results);
         } catch (error) {
-            this.showError(`Error analyzing URL: ${ error.message}`);
+            // Handle specific error types
+            if (error instanceof ReachabilityError) {
+                this.showError(
+                    error.data.message,
+                    error.data.details,
+                    error.data.suggestions
+                );
+            } else if (error instanceof ValidationError) {
+                this.showError(
+                    error.data.details || error.data.error,
+                    null,
+                    error.data.suggestions
+                );
+            } else {
+                this.showError(`Error analyzing URL: ${error.message}`);
+            }
         }
     }
 
@@ -61,9 +94,87 @@ class SecurityChecker {
         document.getElementById('analyzeBtn').disabled = false;
     }
 
-    showError(message) {
+    showError(message, details = null, suggestions = null) {
         this.hideLoading();
-        alert(message); // In production, use a proper modal or toast
+        this.displayErrorMessage(message, details, suggestions);
+    }
+
+    displayErrorMessage(message, details = null, suggestions = null) {
+        // Create error display in the results section
+        const resultsSection = document.getElementById('resultsSection');
+        resultsSection.style.display = 'block';
+        
+        // Determine the appropriate icon and context based on error type
+        let iconClass = 'fas fa-exclamation-triangle';
+        let iconColorClass = 'text-danger';
+        let errorType = 'Connection Error';
+        let errorContext = 'Unable to reach the target host';
+        
+        if (details && details.includes('ENOTFOUND')) {
+            iconClass = 'fas fa-globe-americas';
+            iconColorClass = 'text-warning';
+            errorType = 'DNS Resolution Failed';
+            errorContext = 'Domain name could not be resolved';
+        } else if (details && (details.includes('timeout') || details.includes('Connection timed out'))) {
+            iconClass = 'fas fa-clock reachability-icon';
+            iconColorClass = 'text-warning';
+            errorType = 'Connection Timeout';
+            errorContext = 'Host did not respond within the timeout period';
+        } else if (details && details.includes('Connection refused')) {
+            iconClass = 'fas fa-ban';
+            iconColorClass = 'text-danger';
+            errorType = 'Connection Refused';
+            errorContext = 'Host actively refused the connection';
+        }
+        
+        resultsSection.innerHTML = `
+            <div class="error-display">
+                <div class="alert alert-danger" role="alert">
+                    <div class="d-flex align-items-center mb-3">
+                        <i class="${iconClass} me-3 ${iconColorClass}" style="font-size: 1.8rem;"></i>
+                        <div>
+                            <h5 class="mb-1">${errorType}</h5>
+                            <small class="text-muted">${errorContext}</small>
+                        </div>
+                    </div>
+                    <p class="mb-3 fs-6"><strong>${message}</strong></p>
+                    ${details ? `
+                        <div class="mb-3">
+                            <h6><i class="fas fa-info-circle me-1 text-info"></i>Technical Details:</h6>
+                            <code class="d-block">${details}</code>
+                        </div>
+                    ` : ''}
+                    ${suggestions && suggestions.length > 0 ? `
+                        <div class="mb-3">
+                            <h6><i class="fas fa-lightbulb me-1 text-warning"></i>What you can try:</h6>
+                            <ul class="mb-0">
+                                ${suggestions.map((suggestion, index) => `
+                                    <li class="mb-2">
+                                        <span class="badge bg-light text-dark me-2">${index + 1}</span>
+                                        ${suggestion}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    <div class="border-top pt-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <small class="text-muted">
+                                    <i class="fas fa-shield-alt me-1"></i>
+                                    Our reachability checker validates connectivity before running comprehensive security tests, saving time and providing faster feedback.
+                                </small>
+                            </div>
+                            <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                                <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+                                    <i class="fas fa-redo me-1"></i>Try Again
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     async performSecurityChecks(url) {
@@ -77,7 +188,19 @@ class SecurityChecker {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                // Handle different types of errors
+                const errorData = await response.json().catch(() => null);
+                
+                if (response.status === 503 && errorData) {
+                    // Reachability error - show detailed information
+                    throw new ReachabilityError(errorData);
+                } else if (response.status === 400 && errorData) {
+                    // Validation error
+                    throw new ValidationError(errorData);
+                } else {
+                    // Generic HTTP error
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
             }
 
             const results = await response.json();
@@ -100,7 +223,15 @@ class SecurityChecker {
             return results;
         } catch (error) {
             console.error('Error calling API:', error);
-            // Fallback to simulated data if API fails
+            
+            // Handle specific error types
+            if (error instanceof ReachabilityError) {
+                throw error; // Re-throw to be handled by the calling method
+            } else if (error instanceof ValidationError) {
+                throw error; // Re-throw to be handled by the calling method
+            }
+            
+            // Fallback to simulated data if API fails with network error
             const domain = this.extractDomain(url);
 
             return {
