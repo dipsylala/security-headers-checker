@@ -2,11 +2,86 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "Install Dependencies",
+			"type": "shell",
+			"command": "npm install",
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Build Production",
+			"type": "shell",
+			"command": "npm run build",
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
+			"problemMatcher": [],
+			"dependsOn": "Install Dependencies"
+		},
+		{
 			"label": "Start Security Headers Checker",
 			"type": "shell",
 			"command": "npm start",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"isBackground": true,
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "new",
+				"showReuseMessage": true
+			},
+			"problemMatcher": [],
+			"dependsOn": "Install Dependencies"
+		},
+		{
+			"label": "Start Development Server",
+			"type": "shell",
+			"command": "npm run dev",
 			"group": "build",
 			"isBackground": true,
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "new",
+				"showReuseMessage": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Stop Server",
+			"type": "shell",
+			"command": "taskkill /F /IM node.exe",
+			"windows": {
+				"command": "taskkill /F /IM node.exe"
+			},
+			"linux": {
+				"command": "pkill -f 'node.*server.js'"
+			},
+			"osx": {
+				"command": "pkill -f 'node.*server.js'"
+			},
+			"group": "build",
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": false,
+				"panel": "shared"
+			},
 			"problemMatcher": []
 		}
 	]

@@ -322,53 +322,72 @@ async function checkSSLCertificate(hostname, port) {
                 else if (cert.signatureAlgorithm) {
                     signatureAlgorithm = cert.signatureAlgorithm;
                 }
-                // Method 3: Check if it's in the subject or issuer objects
-                else if (cert.subject && cert.subject.signatureAlgorithm) {
-                    signatureAlgorithm = cert.subject.signatureAlgorithm;
-                }
-                else if (cert.issuer && cert.issuer.signatureAlgorithm) {
-                    signatureAlgorithm = cert.issuer.signatureAlgorithm;
-                }
-                // Method 5: Try using crypto module to get more certificate details
+                // Method 3: Use crypto module to parse certificate
                 else if (cert.raw) {
                     try {
-                        // Try to create X509Certificate object for more detailed information
                         const x509 = new crypto.X509Certificate(cert.raw);
+                        
+                        // Try to get signature algorithm from X509Certificate
                         if (x509.signatureAlgorithm) {
                             signatureAlgorithm = x509.signatureAlgorithm;
+                        } else {
+                            // Parse the certificate manually for signature algorithm
+                            const certPem = x509.toString();
+                            
+                            // Look for signature algorithm in the certificate text
+                            const sigAlgMatch = certPem.match(/Signature Algorithm:\s*([^\n\r]+)/i);
+                            if (sigAlgMatch) {
+                                signatureAlgorithm = sigAlgMatch[1].trim();
+                            } else {
+                                // Fallback: infer from key type and common algorithms
+                                if (cert.asn1Curve || cert.nistCurve) {
+                                    // ECC certificate - likely ECDSA
+                                    if (cert.bits >= 384) {
+                                        signatureAlgorithm = 'ecdsa-with-SHA384';
+                                    } else if (cert.bits >= 256) {
+                                        signatureAlgorithm = 'ecdsa-with-SHA256';
+                                    } else {
+                                        signatureAlgorithm = 'ecdsa-with-SHA1';
+                                    }
+                                } else {
+                                    // RSA certificate - likely RSA with SHA
+                                    if (cert.fingerprint256) {
+                                        signatureAlgorithm = 'sha256WithRSAEncryption';
+                                    } else if (cert.fingerprint) {
+                                        signatureAlgorithm = 'sha1WithRSAEncryption';
+                                    }
+                                }
+                            }
                         }
                     } catch (e) {
                         console.log('Could not parse certificate with crypto.X509Certificate:', e.message);
                         
-                        // Fallback: Try to infer from available data
-                        try {
-                            const certString = cert.toString ? cert.toString() : '';
-                            if (certString.includes('sha256')) {
-                                signatureAlgorithm = 'sha256WithRSAEncryption';
-                            } else if (certString.includes('sha1')) {
-                                signatureAlgorithm = 'sha1WithRSAEncryption';
-                            } else if (certString.includes('sha384')) {
-                                signatureAlgorithm = 'sha384WithRSAEncryption';
-                            } else if (certString.includes('sha512')) {
-                                signatureAlgorithm = 'sha512WithRSAEncryption';
+                        // Enhanced fallback: Try to infer from available data
+                        if (cert.asn1Curve || cert.nistCurve) {
+                            // ECC certificate
+                            if (cert.fingerprint256) {
+                                signatureAlgorithm = 'ECDSA with SHA-256 (inferred from ECC certificate)';
+                            } else if (cert.fingerprint512) {
+                                signatureAlgorithm = 'ECDSA with SHA-512 (inferred from ECC certificate)';
+                            } else {
+                                signatureAlgorithm = 'ECDSA (inferred from ECC certificate)';
                             }
-                        } catch (e2) {
-                            console.log('Could not parse certificate string:', e2.message);
+                        } else if (cert.fingerprint256) {
+                            signatureAlgorithm = 'RSA with SHA-256 (inferred from fingerprint)';
+                        } else if (cert.fingerprint512) {
+                            signatureAlgorithm = 'RSA with SHA-512 (inferred from fingerprint)';
+                        } else if (cert.fingerprint) {
+                            signatureAlgorithm = 'RSA with SHA-1 (inferred from fingerprint)';
                         }
-                    }
-                }
-                // Method 6: Check for specific algorithm indicators in the certificate
-                else if (cert.serialNumber && cert.fingerprint) {
-                    // If we have fingerprint, we can often infer the hash algorithm
-                    if (cert.fingerprint256) {
-                        signatureAlgorithm = 'Likely SHA-256 based (inferred from fingerprint)';
-                    } else if (cert.fingerprint) {
-                        signatureAlgorithm = 'Likely SHA-1 based (inferred from fingerprint)';
                     }
                 }
                 
                 // Debug log for troubleshooting - show all available properties
                 console.log('Certificate properties available:', Object.keys(cert));
+                console.log('Certificate type indicators:');
+                console.log('- asn1Curve:', cert.asn1Curve);
+                console.log('- nistCurve:', cert.nistCurve);
+                console.log('- bits:', cert.bits);
                 console.log('Certificate sigalg property:', cert.sigalg);
                 console.log('Certificate signatureAlgorithm property:', cert.signatureAlgorithm);
                 console.log('Final signature algorithm found:', signatureAlgorithm);
@@ -492,21 +511,41 @@ function calculateSSLGrade(cert, protocol, authorized, signatureAlgorithm = null
         recommendations.push('Configure server to use TLS 1.2 or 1.3');
     }
     
-    // Key length scoring and analysis
+    // Key length scoring and analysis - handle ECC vs RSA differently
     const keyLength = cert.bits || 0;
-    if (keyLength >= 4096) {
-        score += 30;
-    } else if (keyLength >= 2048) {
-        score += 25;
-    } else if (keyLength >= 1024) {
-        score += 15;
-        issues.push(`Weak key length: ${keyLength} bits`);
-        recommendations.push('Use at least 2048-bit RSA keys or 256-bit ECC keys');
-    } else if (keyLength > 0) {
-        issues.push(`Very weak key length: ${keyLength} bits`);
-        recommendations.push('Immediately upgrade to at least 2048-bit RSA keys');
+    const isECC = cert.asn1Curve || cert.nistCurve || (keyLength <= 384 && keyLength >= 224);
+    
+    if (isECC) {
+        // ECC key analysis
+        if (keyLength >= 384) {
+            score += 30; // P-384 or higher
+        } else if (keyLength >= 256) {
+            score += 28; // P-256 (very strong for ECC)
+        } else if (keyLength >= 224) {
+            score += 20; // P-224 (acceptable for ECC)
+            issues.push(`ECC key could be stronger: ${keyLength} bits`);
+            recommendations.push('Consider upgrading to P-256 or P-384 ECC keys for maximum security');
+        } else if (keyLength > 0) {
+            score += 10;
+            issues.push(`Weak ECC key length: ${keyLength} bits`);
+            recommendations.push('Upgrade to at least P-256 ECC keys');
+        }
     } else {
-        issues.push('Key length information unavailable');
+        // RSA key analysis
+        if (keyLength >= 4096) {
+            score += 30;
+        } else if (keyLength >= 2048) {
+            score += 25;
+        } else if (keyLength >= 1024) {
+            score += 15;
+            issues.push(`Weak RSA key length: ${keyLength} bits`);
+            recommendations.push('Use at least 2048-bit RSA keys or 256-bit ECC keys');
+        } else if (keyLength > 0) {
+            issues.push(`Very weak RSA key length: ${keyLength} bits`);
+            recommendations.push('Immediately upgrade to at least 2048-bit RSA keys');
+        } else {
+            issues.push('Key length information unavailable');
+        }
     }
     
     // Certificate validity analysis
@@ -536,30 +575,45 @@ function calculateSSLGrade(cert, protocol, authorized, signatureAlgorithm = null
     // Signature algorithm analysis - use provided parameter or fallback to cert property
     const sigAlg = signatureAlgorithm || cert.sigalg || '';
     if (sigAlg && sigAlg !== 'Unknown') {
-        // Check for various SHA algorithms
-        if (sigAlg.toLowerCase().includes('sha256') || sigAlg.toLowerCase().includes('sha-256')) {
+        // Check for various signature algorithms
+        if (sigAlg.toLowerCase().includes('sha256') || sigAlg.toLowerCase().includes('sha-256') || 
+            sigAlg.toLowerCase().includes('ecdsa-with-sha256')) {
             score += 20;
-        } else if (sigAlg.toLowerCase().includes('sha384') || sigAlg.toLowerCase().includes('sha-384')) {
+        } else if (sigAlg.toLowerCase().includes('sha384') || sigAlg.toLowerCase().includes('sha-384') ||
+                   sigAlg.toLowerCase().includes('ecdsa-with-sha384')) {
             score += 20;
-        } else if (sigAlg.toLowerCase().includes('sha512') || sigAlg.toLowerCase().includes('sha-512')) {
+        } else if (sigAlg.toLowerCase().includes('sha512') || sigAlg.toLowerCase().includes('sha-512') ||
+                   sigAlg.toLowerCase().includes('ecdsa-with-sha512')) {
             score += 20;
-        } else if (sigAlg.toLowerCase().includes('sha1') || sigAlg.toLowerCase().includes('sha-1')) {
+        } else if (sigAlg.toLowerCase().includes('ecdsa') && sigAlg.toLowerCase().includes('inferred')) {
+            // ECDSA is generally good, give partial credit for inferred
+            score += 18;
+        } else if (sigAlg.toLowerCase().includes('ecdsa')) {
+            // ECDSA without specific hash - still generally secure
+            score += 15;
+        } else if (sigAlg.toLowerCase().includes('sha1') || sigAlg.toLowerCase().includes('sha-1') ||
+                   sigAlg.toLowerCase().includes('ecdsa-with-sha1')) {
+            score += 5;
             issues.push('Using deprecated SHA-1 signature algorithm');
             recommendations.push('Upgrade to SHA-256 or higher signature algorithm');
         } else if (sigAlg.toLowerCase().includes('md5')) {
             issues.push('Using insecure MD5 signature algorithm');
             recommendations.push('Immediately upgrade to SHA-256 or higher - MD5 is cryptographically broken');
         } else if (sigAlg.toLowerCase().includes('likely') || sigAlg.toLowerCase().includes('inferred')) {
-            // For inferred algorithms, give partial credit
+            // For inferred algorithms, give partial credit based on strength
             if (sigAlg.toLowerCase().includes('sha-256') || sigAlg.toLowerCase().includes('sha256')) {
-                score += 15; // Partial credit for inferred SHA-256
-                issues.push('Signature algorithm inferred (likely secure but not definitively extracted)');
+                score += 18; // Good credit for inferred SHA-256
+            } else if (sigAlg.toLowerCase().includes('sha-384') || sigAlg.toLowerCase().includes('sha384')) {
+                score += 18; // Good credit for inferred SHA-384
+            } else if (sigAlg.toLowerCase().includes('sha-512') || sigAlg.toLowerCase().includes('sha512')) {
+                score += 18; // Good credit for inferred SHA-512
             } else if (sigAlg.toLowerCase().includes('sha-1') || sigAlg.toLowerCase().includes('sha1')) {
-                score += 5; // Minimal credit for inferred SHA-1
+                score += 8; // Minimal credit for inferred SHA-1
                 issues.push('Signature algorithm appears to be SHA-1 (deprecated)');
                 recommendations.push('Upgrade to SHA-256 or higher signature algorithm');
             }
         } else {
+            score += 5; // Some credit for having algorithm info
             issues.push(`Unknown signature algorithm: ${sigAlg}`);
             recommendations.push('Verify signature algorithm is secure (SHA-256 or higher)');
         }
@@ -1159,4 +1213,4 @@ app.listen(PORT, () => {
     console.log(`Open your browser to http://localhost:${PORT}`);
 });
 
-module.exports = app;
+module.exports = { app, performSecurityAnalysis };

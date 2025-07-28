@@ -2,6 +2,67 @@
 
 A comprehensive web application built with Bootstrap and Node.js that analyzes website security headers, SSL certificates, and performs various security checks.
 
+## Quick Start & Build Instructions
+
+### Option 1: Using VS Code (Recommended)
+
+1. Open the project in VS Code
+2. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
+3. Type "Tasks: Run Task" and select it
+4. Choose "Start Security Headers Checker"
+5. The application will be available at http://localhost:3000
+
+### Option 2: Using Build Scripts
+
+**Windows (Command Prompt):**
+```bash
+build-and-run.bat
+```
+
+**Windows (PowerShell):**
+```powershell
+.\build-and-run.ps1
+```
+
+### Option 3: Manual Setup
+
+1. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Start the Application:**
+   ```bash
+   npm start
+   ```
+
+3. **For Development with Auto-reload:**
+   ```bash
+   npm run dev
+   ```
+
+### Option 4: Production Build
+
+Create a production-ready build in `./build/` folder:
+
+```bash
+npm run build
+```
+
+This creates a complete, optimized production build with:
+- All application files (excluding tests and development files)
+- Production dependencies only
+- Startup scripts for Windows and Linux/Mac
+- Deployment documentation
+
+To run the production build:
+```bash
+cd build
+npm start
+```
+
+The application will be available at **http://localhost:3000**
+
 ## Features
 
 - **URL/IP Analysis**: Enter any URL or IP address for security analysis
