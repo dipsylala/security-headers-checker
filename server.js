@@ -50,19 +50,19 @@ app.get('/api/health', (req, res) => {
 // Main security analysis endpoint
 app.post('/api/analyze', async (req, res) => {
     const startTime = Date.now();
-    
+
     try {
         const { url } = req.body;
-        
+
         if (!url) {
             return res.status(400).json({
                 error: 'URL is required',
                 details: 'Please provide a URL to analyze'
             });
         }
-        
+
         console.log(`[${new Date().toISOString()}] Starting analysis for: ${url}`);
-        
+
         // Step 1: Validate URL
         const urlValidation = validateUrl(url);
         if (!urlValidation.valid) {
@@ -76,19 +76,19 @@ app.post('/api/analyze', async (req, res) => {
                 ]
             });
         }
-        
+
         const validatedUrl = urlValidation.url;
         const urlAssessment = getUrlSecurityAssessment(validatedUrl);
-        
+
         // Step 2: Perform parallel security checks
         console.log(`[${new Date().toISOString()}] Performing security checks...`);
-        
+
         const [sslResult, headersResult, additionalResult] = await Promise.allSettled([
             checkSSLCertificate(validatedUrl),
             checkSecurityHeaders(validatedUrl),
             performAdditionalChecks(validatedUrl)
         ]);
-        
+
         // Process results and handle any failures
         const results = {
             url: validatedUrl,
@@ -109,7 +109,7 @@ app.post('/api/analyze', async (req, res) => {
                 score: 0
             }
         };
-        
+
         // Step 3: Calculate overall security score
         const scores = {
             ssl: {
@@ -126,16 +126,16 @@ app.post('/api/analyze', async (req, res) => {
                 maxScore: urlAssessment.maxScore || 10
             }
         };
-        
+
         const securityAssessment = generateSecurityAssessment(scores, {
             ssl: results.ssl,
             headers: results.headers.headers,
             additional: results.additional.checks
         });
-        
+
         // Step 4: Prepare response
         const analysisTime = Date.now() - startTime;
-        
+
         const response = {
             analysis: {
                 url: validatedUrl,
@@ -152,16 +152,16 @@ app.post('/api/analyze', async (req, res) => {
             },
             warnings: urlValidation.warnings || []
         };
-        
+
         console.log(`[${new Date().toISOString()}] Analysis completed in ${analysisTime}ms - Score: ${securityAssessment.score}/100 (${securityAssessment.grade})`);
-        
+
         res.json(response);
-        
+
     } catch (error) {
         console.error('Analysis error:', error);
-        
+
         const analysisTime = Date.now() - startTime;
-        
+
         res.status(500).json({
             error: 'Analysis failed',
             details: error.message,
@@ -247,9 +247,9 @@ app.use('*', (req, res) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
     console.error('Server error:', err);
-    
+
     res.status(500).json({
         error: 'Internal server error',
         details: process.env.NODE_ENV === 'development' ? err.message : 'An unexpected error occurred',
@@ -263,7 +263,7 @@ app.listen(PORT, () => {
     console.log(`📊 API documentation available at http://localhost:${PORT}/api-docs`);
     console.log(`🏥 Health check available at http://localhost:${PORT}/api/health`);
     console.log(`📁 Serving static files from current directory`);
-    
+
     // Log loaded modules
     console.log('📦 Loaded modules:');
     console.log('   ✓ URL Utilities');
@@ -271,7 +271,7 @@ app.listen(PORT, () => {
     console.log('   ✓ Headers Checker');
     console.log('   ✓ Additional Checks');
     console.log('   ✓ Scoring System');
-    
+
     console.log(`\n🎯 Ready to analyze security headers and configurations!`);
 });
 

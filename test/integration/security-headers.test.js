@@ -1,4 +1,3 @@
-const assert = require('assert');
 const http = require('http');
 
 /**
@@ -14,7 +13,7 @@ const http = require('http');
 function performSecurityAnalysis(url) {
     return new Promise((resolve, reject) => {
         const postData = JSON.stringify({ url });
-        
+
         const options = {
             hostname: 'localhost',
             port: 3000,
@@ -25,14 +24,14 @@ function performSecurityAnalysis(url) {
                 'Content-Length': Buffer.byteLength(postData)
             }
         };
-        
+
         const req = http.request(options, (res) => {
             let data = '';
-            
+
             res.on('data', (chunk) => {
                 data += chunk;
             });
-            
+
             res.on('end', () => {
                 try {
                     const result = JSON.parse(data);
@@ -46,11 +45,11 @@ function performSecurityAnalysis(url) {
                 }
             });
         });
-        
+
         req.on('error', (error) => {
             reject(error);
         });
-        
+
         req.write(postData);
         req.end();
     });
@@ -101,36 +100,36 @@ const HEADER_TEST_SITES = [
 
 async function runHeadersTests() {
     console.log('🔒 Starting Security Headers Integration Tests...\n');
-    
+
     const results = [];
-    
+
     for (const test of HEADER_TEST_SITES) {
         console.log(`🔍 Testing: ${test.name}`);
         console.log(`📡 URL: ${test.url}`);
-        
+
         try {
             const analysis = await performSecurityAnalysis(test.url);
             const headers = analysis.details.headers; // Updated path for modular API
-            
+
             // Display headers information
             const scoreValue = typeof headers.score === 'object' ? headers.score.normalizedScore : headers.score;
             const displayScore = scoreValue ? Math.round(scoreValue * 10) / 10 : 0;
             console.log(`📊 Headers Found: ${headers.headers ? headers.headers.length : 0}`);
             console.log(`🎯 Score: ${displayScore}/10`);
-            
+
             if (headers.headers && headers.headers.length > 0) {
                 console.log(`🔒 Headers Details:`);
                 headers.headers.forEach(header => {
-                    const statusEmoji = header.status === 'pass' ? '✅' : 
-                                      header.status === 'warning' ? '⚠️' : 
-                                      header.status === 'fail' ? '❌' : 'ℹ️';
+                    const statusEmoji = header.status === 'pass' ? '✅' :
+                        header.status === 'warning' ? '⚠️' :
+                            header.status === 'fail' ? '❌' : 'ℹ️';
                     console.log(`   ${statusEmoji} ${header.name}: ${header.status}`);
                     if (header.value) {
                         console.log(`      Value: ${header.value.substring(0, 100)}${header.value.length > 100 ? '...' : ''}`);
                     }
                 });
             }
-            
+
             // Categorize headers by status
             const headersByStatus = {
                 pass: headers.headers ? headers.headers.filter(h => h.status === 'present' || h.status === 'good').length : 0,
@@ -138,20 +137,20 @@ async function runHeadersTests() {
                 fail: headers.headers ? headers.headers.filter(h => h.status === 'missing' || h.status === 'fail').length : 0,
                 info: headers.headers ? headers.headers.filter(h => h.status === 'info').length : 0
             };
-            
+
             console.log(`📈 Header Status Summary:`);
             console.log(`   ✅ Passed: ${headersByStatus.pass}`);
             console.log(`   ⚠️  Warnings: ${headersByStatus.warning}`);
             console.log(`   ❌ Failed: ${headersByStatus.fail}`);
             console.log(`   ℹ️  Info: ${headersByStatus.info}`);
-            
+
             // Validation
             let testPassed = true;
             const testErrors = [];
-            
+
             // Check for HSTS if expected
             if (test.expectedResults.shouldHaveHSTS) {
-                const hasHSTS = headers.headers && headers.headers.some(h => 
+                const hasHSTS = headers.headers && headers.headers.some(h =>
                     h.name === 'Strict-Transport-Security' && (h.status === 'present' || h.status === 'good')
                 );
                 if (!hasHSTS) {
@@ -159,21 +158,21 @@ async function runHeadersTests() {
                     testErrors.push('Missing HSTS header');
                 }
             }
-            
+
             // Check minimum headers count
             const totalHeaders = headers.headers ? headers.headers.length : 0;
             if (totalHeaders < test.expectedResults.shouldHaveMinimumHeaders) {
                 testPassed = false;
                 testErrors.push(`Expected at least ${test.expectedResults.shouldHaveMinimumHeaders} headers, found ${totalHeaders}`);
             }
-            
+
             // Check headers score is reasonable (not completely failing)
             const scoreToCheck = typeof headers.score === 'object' ? headers.score.normalizedScore : headers.score;
             if (scoreToCheck < 2) {
                 testPassed = false;
                 testErrors.push(`Headers score too low: ${scoreToCheck}/10`);
             }
-            
+
             // Report results
             if (testPassed) {
                 console.log(`✅ ${test.name} PASSED`);
@@ -182,15 +181,15 @@ async function runHeadersTests() {
                 console.log(`❌ ${test.name} FAILED: ${testErrors.join(', ')}`);
                 results.push({ test: test.name, passed: false, errors: testErrors });
             }
-            
+
         } catch (error) {
             console.log(`❌ ${test.name} FAILED: ${error.message}`);
             results.push({ test: test.name, passed: false, error: error.message });
         }
-        
+
         console.log(''); // Empty line for readability
     }
-    
+
     return results;
 }
 
@@ -199,25 +198,25 @@ async function validateHeaderFormatting(url) {
     try {
         const analysis = await performSecurityAnalysis(url);
         const headers = analysis.details.headers;
-        
+
         console.log(`🔍 Validating header formatting for: ${url}`);
-        
-        let formatTests = {
+
+        const formatTests = {
             hasCorrectStructure: headers.headers && Array.isArray(headers.headers),
             hasScoreField: typeof headers.score === 'number',
-            hasValidHeaders: headers.headers && headers.headers.every(h => 
+            hasValidHeaders: headers.headers && headers.headers.every(h =>
                 h.name && h.description && h.status
             ),
             scoreInValidRange: headers.score >= 0 && headers.score <= 10
         };
-        
+
         console.log(`📋 Format Validation Results:`);
         Object.entries(formatTests).forEach(([test, passed]) => {
             console.log(`   ${passed ? '✅' : '❌'} ${test}: ${passed}`);
         });
-        
+
         return Object.values(formatTests).every(Boolean);
-        
+
     } catch (error) {
         console.log(`❌ Header format validation failed: ${error.message}`);
         return false;

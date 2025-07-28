@@ -14,7 +14,7 @@ class SecurityChecker {
 
     async analyzeUrl() {
         const urlInput = document.getElementById('urlInput').value.trim();
-        if (!urlInput) return;
+        if (!urlInput) { return; }
 
         // Validate URL format
         if (!this.isValidUrl(urlInput)) {
@@ -23,14 +23,14 @@ class SecurityChecker {
         }
 
         this.showLoading();
-        
+
         try {
             // Simulate API call - in real implementation, this would call your backend
             const results = await this.performSecurityChecks(urlInput);
             this.currentResults = results;
             this.displayResults(results);
         } catch (error) {
-            this.showError('Error analyzing URL: ' + error.message);
+            this.showError(`Error analyzing URL: ${ error.message}`);
         }
     }
 
@@ -41,9 +41,9 @@ class SecurityChecker {
             if (ipRegex.test(string)) {
                 return true;
             }
-            
+
             // Check if it's a URL
-            const url = new URL(string.startsWith('http') ? string : 'https://' + string);
+            const url = new URL(string.startsWith('http') ? string : `https://${ string}`);
             return url.protocol === 'http:' || url.protocol === 'https:';
         } catch (_) {
             return false;
@@ -71,7 +71,7 @@ class SecurityChecker {
             const response = await fetch('/api/analyze', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ url: url })
             });
@@ -81,7 +81,7 @@ class SecurityChecker {
             }
 
             const results = await response.json();
-            
+
             // Transform API response to match frontend expectations
             if (results.details) {
                 return {
@@ -95,13 +95,13 @@ class SecurityChecker {
                     security: results.security || {}
                 };
             }
-            
+
             return results;
         } catch (error) {
             console.error('Error calling API:', error);
             // Fallback to simulated data if API fails
             const domain = this.extractDomain(url);
-            
+
             return {
                 url: url,
                 domain: domain,
@@ -116,8 +116,9 @@ class SecurityChecker {
 
     extractDomain(url) {
         try {
-            const urlObj = new URL(url.startsWith('http') ? url : 'https://' + url);
+            const urlObj = new URL(url.startsWith('http') ? url : `https://${ url}`);
             return urlObj.hostname;
+        // eslint-disable-next-line no-unused-vars
         } catch (e) {
             return url;
         }
@@ -234,13 +235,13 @@ class SecurityChecker {
 
         // Headers Score (50 points)
         maxScore += 50;
-        const criticalHeaders = results.headers.filter(h => 
+        const criticalHeaders = results.headers.filter(h =>
             ['Strict-Transport-Security', 'Content-Security-Policy', 'X-Frame-Options', 'X-Content-Type-Options'].includes(h.name)
         );
         const presentCritical = criticalHeaders.filter(h => h.present).length;
         score += (presentCritical / criticalHeaders.length) * 40;
 
-        const otherHeaders = results.headers.filter(h => 
+        const otherHeaders = results.headers.filter(h =>
             !['Strict-Transport-Security', 'Content-Security-Policy', 'X-Frame-Options', 'X-Content-Type-Options'].includes(h.name)
         );
         const presentOther = otherHeaders.filter(h => h.present).length;
@@ -259,40 +260,40 @@ class SecurityChecker {
 
     displayResults(results) {
         this.hideLoading();
-        
+
         // Calculate overall score if not provided by API
         if (!results.score || results.score === 0) {
             results.score = this.calculateScore(results);
         }
-        
+
         // Show results section
         document.getElementById('resultsSection').style.display = 'block';
         document.getElementById('resultsSection').classList.add('fade-in');
-        
+
         // Update overall score
         this.updateOverallScore(results.score);
-        
+
         // Display SSL results
         this.displaySSLResults(results.ssl);
-        
+
         // Display headers results
         this.displayHeadersResults(results.headers);
-        
+
         // Display additional checks
         this.displayAdditionalResults(results.additional);
-        
+
         // Scroll to results
         document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
     }
 
     updateOverallScore(score) {
         const progressBar = document.getElementById('scoreProgressBar');
-        progressBar.style.width = score + '%';
-        
+        progressBar.style.width = `${score }%`;
+
         // Update progress bar color and description based on score
         progressBar.className = 'progress-bar';
         let grade, description, badgeClass;
-        
+
         if (score >= 90) {
             grade = 'A+';
             description = 'Excellent security posture!';
@@ -324,41 +325,41 @@ class SecurityChecker {
             progressBar.classList.add('score-critical');
             badgeClass = 'bg-danger';
         }
-        
+
         // Update the score display with grade badge properly positioned
         const scoreElement = document.getElementById('overallScore');
         // Clear any existing content
         scoreElement.innerHTML = '';
-        
+
         // Create score text
         const scoreText = document.createTextNode(`${score}/100`);
         scoreElement.appendChild(scoreText);
-        
+
         // Create and append the badge
         const gradeBadge = document.createElement('span');
         gradeBadge.className = `badge ${badgeClass}`;
         gradeBadge.textContent = grade;
         scoreElement.appendChild(gradeBadge);
-        
+
         document.getElementById('scoreDescription').textContent = description;
-        
+
         // Add grade boundaries visualization
         this.addGradeBoundaries();
     }
 
     addGradeBoundaries() {
         const progressContainer = document.querySelector('.progress');
-        
+
         // Remove existing boundaries if any
         const existingBoundaries = progressContainer.parentElement.querySelector('.grade-boundaries');
         if (existingBoundaries) {
             existingBoundaries.remove();
         }
-        
+
         // Create grade boundaries container
         const boundariesContainer = document.createElement('div');
         boundariesContainer.className = 'grade-boundaries';
-        
+
         // Create grade boundaries
         const boundaries = document.createElement('div');
         boundaries.className = 'grade-scale';
@@ -388,20 +389,20 @@ class SecurityChecker {
                 <div class="grade-label">A+<br><small>90-100</small></div>
             </div>
         `;
-        
+
         boundariesContainer.appendChild(boundaries);
-        
+
         // Insert boundaries directly after the progress bar
         progressContainer.parentElement.insertBefore(boundariesContainer, progressContainer.nextSibling);
     }
 
     displaySSLResults(ssl) {
         const container = document.getElementById('sslResults');
-        
+
         const statusClass = ssl.valid ? 'pass' : 'fail';
         const statusIcon = ssl.valid ? 'fa-check-circle' : 'fa-times-circle';
         const statusText = ssl.valid ? 'Valid' : 'Invalid';
-        
+
         // Build explanation section
         let explanationSection = '';
         if (ssl.gradeExplanation) {
@@ -415,7 +416,7 @@ class SecurityChecker {
                 </div>
             `;
         }
-        
+
         // Build recommendations section
         let recommendationsSection = '';
         if (ssl.recommendations && ssl.recommendations.length > 0) {
@@ -432,7 +433,7 @@ class SecurityChecker {
                 </div>
             `;
         }
-        
+
         container.innerHTML = `
             <div class="security-item ${statusClass}">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -483,7 +484,7 @@ class SecurityChecker {
 
     displayHeadersResults(headers) {
         const container = document.getElementById('headersResults');
-        
+
         // Group headers by category
         const categorizedHeaders = {
             critical: headers.filter(h => h.category === 'critical'),
@@ -509,14 +510,14 @@ class SecurityChecker {
 
         Object.keys(categorizedHeaders).forEach(category => {
             const categoryHeaders = categorizedHeaders[category];
-            if (categoryHeaders.length === 0) return;
+            if (categoryHeaders.length === 0) { return; }
 
             const categoryInfo = categoryTitles[category];
             const presentCount = categoryHeaders.filter(h => h.present).length;
             const totalCount = categoryHeaders.length;
-            
+
             // Special handling for information headers (good when absent)
-            const goodCount = category === 'information' ? 
+            const goodCount = category === 'information' ?
                 categoryHeaders.filter(h => !h.present).length : presentCount;
 
             html += `
@@ -534,13 +535,13 @@ class SecurityChecker {
                 </div>
             `;
         });
-        
+
         container.innerHTML = html;
     }
 
     renderHeaderItem(header, category) {
         let statusClass, statusIcon, statusText, statusBadgeClass;
-        
+
         if (category === 'information') {
             // For information headers, absence is good
             statusClass = header.present ? 'fail' : 'pass';
@@ -553,7 +554,7 @@ class SecurityChecker {
             statusText = header.present ? 'Present' : 'Missing';
             statusBadgeClass = header.present ? 'bg-success' : 'bg-danger';
         }
-        
+
         return `
             <div class="security-item ${statusClass} mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -598,11 +599,11 @@ class SecurityChecker {
 
     displayAdditionalResults(additional) {
         const container = document.getElementById('additionalResults');
-        
+
         const additionalItems = additional.map(check => {
             const statusIcon = this.getStatusIcon(check.status);
             const statusBadge = this.getStatusBadge(check.status);
-            
+
             return `
                 <div class="security-item ${check.status}">
                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -618,7 +619,7 @@ class SecurityChecker {
                 </div>
             `;
         }).join('');
-        
+
         container.innerHTML = additionalItems;
     }
 
@@ -642,6 +643,8 @@ class SecurityChecker {
 }
 
 // Export functionality
+// Used by the form
+// eslint-disable-next-line no-unused-vars
 function exportReport(format) {
     if (!window.securityChecker.currentResults) {
         alert('No results to export');
@@ -665,23 +668,26 @@ function exportReport(format) {
         case 'csv':
             exportToCSV(results, filename);
             break;
+        default:
+            console.error('Unknown export format:', format);
+            break;
     }
 }
 
 function exportToPDF(results, filename) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    
+
     // Title
     doc.setFontSize(20);
     doc.text('Security Headers Report', 20, 20);
-    
+
     // URL and timestamp
     doc.setFontSize(12);
     doc.text(`URL: ${results.url}`, 20, 35);
     doc.text(`Generated: ${new Date(results.timestamp).toLocaleString()}`, 20, 45);
     doc.text(`Security Score: ${results.score}/100`, 20, 55);
-    
+
     // SSL Information
     doc.setFontSize(16);
     doc.text('SSL Certificate', 20, 75);
@@ -689,7 +695,7 @@ function exportToPDF(results, filename) {
     doc.text(`Status: ${results.ssl.valid ? 'Valid' : 'Invalid'}`, 25, 85);
     doc.text(`Grade: ${results.ssl.grade}`, 25, 95);
     doc.text(`Issuer: ${results.ssl.issuer}`, 25, 105);
-    
+
     // Security Headers
     doc.setFontSize(16);
     doc.text('Security Headers', 20, 125);
@@ -699,13 +705,13 @@ function exportToPDF(results, filename) {
         doc.text(`${header.name}: ${header.present ? 'Present' : 'Missing'}`, 25, yPos);
         yPos += 10;
     });
-    
+
     doc.save(`${filename}.pdf`);
 }
 
 function exportToExcel(results, filename) {
     const workbook = XLSX.utils.book_new();
-    
+
     // Summary sheet
     const summaryData = [
         ['URL', results.url],
@@ -716,7 +722,7 @@ function exportToExcel(results, filename) {
     ];
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
-    
+
     // Headers sheet
     const headersData = [
         ['Header Name', 'Present', 'Value', 'Description']
@@ -731,7 +737,7 @@ function exportToExcel(results, filename) {
     });
     const headersSheet = XLSX.utils.aoa_to_sheet(headersData);
     XLSX.utils.book_append_sheet(workbook, headersSheet, 'Headers');
-    
+
     XLSX.writeFile(workbook, `${filename}.xlsx`);
 }
 
@@ -765,7 +771,7 @@ function exportToCSV(results, filename) {
             check.description
         ])
     ];
-    
+
     const csv = csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
     const dataBlob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(dataBlob);
@@ -776,6 +782,8 @@ function exportToCSV(results, filename) {
     URL.revokeObjectURL(url);
 }
 
+// Used by the form
+// eslint-disable-next-line no-unused-vars
 function resetForm() {
     document.getElementById('urlInput').value = '';
     document.getElementById('resultsSection').style.display = 'none';
@@ -790,7 +798,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Add some demo URLs for quick testing
 document.addEventListener('DOMContentLoaded', function() {
     const urlInput = document.getElementById('urlInput');
-    
+
     // Add placeholder with rotating examples
     const examples = [
         'https://example.com',
@@ -798,14 +806,14 @@ document.addEventListener('DOMContentLoaded', function() {
         'https://stackoverflow.com',
         '192.168.1.1'
     ];
-    
+
     let currentExample = 0;
-    
+
     function rotatePlaceholder() {
         urlInput.placeholder = examples[currentExample];
         currentExample = (currentExample + 1) % examples.length;
     }
-    
+
     // Rotate placeholder every 3 seconds
     setInterval(rotatePlaceholder, 3000);
     rotatePlaceholder(); // Set initial placeholder

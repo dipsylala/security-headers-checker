@@ -14,7 +14,7 @@ const http = require('http');
 function performSecurityAnalysis(url) {
     return new Promise((resolve, reject) => {
         const postData = JSON.stringify({ url });
-        
+
         const options = {
             hostname: 'localhost',
             port: 3000,
@@ -25,14 +25,14 @@ function performSecurityAnalysis(url) {
                 'Content-Length': Buffer.byteLength(postData)
             }
         };
-        
+
         const req = http.request(options, (res) => {
             let data = '';
-            
+
             res.on('data', (chunk) => {
                 data += chunk;
             });
-            
+
             res.on('end', () => {
                 try {
                     const result = JSON.parse(data);
@@ -46,11 +46,11 @@ function performSecurityAnalysis(url) {
                 }
             });
         });
-        
+
         req.on('error', (error) => {
             reject(error);
         });
-        
+
         req.write(postData);
         req.end();
     });
@@ -101,60 +101,60 @@ const SSL_TEST_SITES = [
 
 async function runSSLTests() {
     console.log('🔒 Starting SSL/TLS Certificate Integration Tests...\n');
-    
+
     const results = [];
-    
+
     for (const test of SSL_TEST_SITES) {
         console.log(`🔍 Testing: ${test.name}`);
         console.log(`📡 URL: ${test.url}`);
-        
+
         try {
             const analysis = await performSecurityAnalysis(test.url);
             const ssl = analysis.details.ssl; // Updated path for modular API
-            
+
             // Display SSL information
             console.log(`🔒 SSL Valid: ${ssl.valid}`);
             console.log(`🔐 Protocol: ${ssl.protocol}`);
             console.log(`🔑 Key Length: ${ssl.keyLength} bits`);
             console.log(`📜 Signature Algorithm: ${ssl.signatureAlgorithm}`);
             console.log(`🎯 Grade: ${ssl.grade}`);
-            
+
             if (ssl.gradeExplanation) {
                 console.log(`💬 Explanation: ${ssl.gradeExplanation}`);
             }
-            
+
             // Test signature algorithm detection
             const signatureTests = {
                 isNotUnknown: ssl.signatureAlgorithm !== 'Unknown',
                 isNotUnavailable: !ssl.signatureAlgorithm.includes('unavailable'),
                 hasAlgorithmInfo: ssl.signatureAlgorithm && ssl.signatureAlgorithm.length > 0,
                 isValidAlgorithm: ssl.signatureAlgorithm && (
-                    ssl.signatureAlgorithm.includes('ecdsa') || 
+                    ssl.signatureAlgorithm.includes('ecdsa') ||
                     ssl.signatureAlgorithm.includes('rsa') ||
                     ssl.signatureAlgorithm.includes('RSA') ||
                     ssl.signatureAlgorithm.includes('SHA')
                 )
             };
-            
+
             console.log(`🧬 Signature Algorithm Tests:`);
             console.log(`   ✓ Not Unknown: ${signatureTests.isNotUnknown}`);
             console.log(`   ✓ Not Unavailable: ${signatureTests.isNotUnavailable}`);
             console.log(`   ✓ Has Algorithm Info: ${signatureTests.hasAlgorithmInfo}`);
             console.log(`   ✓ Valid Algorithm: ${signatureTests.isValidAlgorithm}`);
-            
+
             // Validation
             let testPassed = true;
             const testErrors = [];
-            
+
             // SSL validity test
             try {
-                assert.strictEqual(ssl.valid, test.expectedResults.valid, 
+                assert.strictEqual(ssl.valid, test.expectedResults.valid,
                     `SSL validity should be ${test.expectedResults.valid}`);
             } catch (e) {
                 testErrors.push(e.message);
                 testPassed = false;
             }
-            
+
             // Protocol test
             if (test.expectedResults.protocol) {
                 try {
@@ -165,7 +165,7 @@ async function runSSLTests() {
                     testPassed = false;
                 }
             }
-            
+
             // Grade test
             if (test.expectedResults.gradeExpectation) {
                 try {
@@ -176,7 +176,7 @@ async function runSSLTests() {
                     testPassed = false;
                 }
             }
-            
+
             // Key length test
             if (test.expectedResults.minKeyLength) {
                 try {
@@ -187,7 +187,7 @@ async function runSSLTests() {
                     testPassed = false;
                 }
             }
-            
+
             // Signature algorithm tests
             try {
                 assert(signatureTests.isNotUnknown && signatureTests.hasAlgorithmInfo && signatureTests.isValidAlgorithm,
@@ -196,7 +196,7 @@ async function runSSLTests() {
                 testErrors.push(e.message);
                 testPassed = false;
             }
-            
+
             results.push({
                 test: test.name,
                 url: test.url,
@@ -205,13 +205,13 @@ async function runSSLTests() {
                 ssl: ssl,
                 signatureTests: signatureTests
             });
-            
+
             if (testPassed) {
                 console.log(`✅ ${test.name} PASSED\n`);
             } else {
                 console.log(`❌ ${test.name} FAILED: ${testErrors.join('; ')}\n`);
             }
-            
+
         } catch (error) {
             console.error(`❌ ${test.name} FAILED: ${error.message}\n`);
             results.push({
@@ -222,23 +222,23 @@ async function runSSLTests() {
             });
         }
     }
-    
+
     // Summary
     console.log('📊 SSL Certificate Test Summary:');
     console.log('═'.repeat(50));
-    
+
     const passed = results.filter(r => r.passed).length;
     const total = results.length;
-    
+
     console.log(`✅ Overall Results: ${passed}/${total} tests passed`);
-    
+
     if (passed < total) {
         console.log('\n❌ Failed Tests:');
         results.filter(r => !r.passed).forEach(result => {
             console.log(`   • ${result.test}: ${result.errors?.join(', ') || result.error}`);
         });
     }
-    
+
     // SSL Grade Distribution
     const sslResults = results.filter(r => r.passed && r.ssl);
     if (sslResults.length > 0) {
@@ -250,19 +250,19 @@ async function runSSLTests() {
         Object.keys(gradeDistribution).sort().forEach(grade => {
             console.log(`   ${grade}: ${gradeDistribution[grade]} site(s)`);
         });
-        
+
         // Signature Algorithm Summary
         console.log('\n🔐 Signature Algorithm Summary:');
         const workingAlgorithms = sslResults.filter(r => r.signatureTests?.isValidAlgorithm).length;
         console.log(`   Working detection: ${workingAlgorithms}/${sslResults.length}`);
-        
+
         sslResults.forEach(r => {
             if (r.ssl && r.ssl.signatureAlgorithm) {
                 console.log(`   ${r.test.split(' ')[0]}: ${r.ssl.signatureAlgorithm}`);
             }
         });
     }
-    
+
     return results;
 }
 

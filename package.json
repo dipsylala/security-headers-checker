@@ -12,12 +12,15 @@
     "clean": "rimraf build",
     "prebuild": "npm run clean",
     "test": "npm run test:integration",
-    "test:integration": "node test/integration/test-runner.js",
-    "test:ssl": "node test/integration/test-runner.js ssl",
-    "test:headers": "node test/integration/test-runner.js headers",
-    "test:additional": "node test/integration/test-runner.js additional",
-    "test:performance": "node test/integration/test-runner.js performance",
-    "test:legacy": "node test/integration.test.js"
+    "test:integration": "node test/test-runner.js",
+    "test:ssl": "node test/integration/ssl-certificate.test.js",
+    "test:headers": "node test/integration/security-headers.test.js",
+    "test:additional": "node test/integration/additional-checks.test.js",
+    "test:performance": "node test/integration/performance.test.js",
+    "test:legacy": "node test/integration.test.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:check": "eslint . --max-warnings 0"
   },
   "keywords": [
     "security",
@@ -29,16 +32,18 @@
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
     "cors": "^2.8.5",
+    "express": "^4.18.2",
     "helmet": "^7.1.0",
     "node-fetch": "^3.3.2",
     "tls": "^0.0.1",
     "url": "^0.11.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "eslint": "^9.32.0",
+    "fs-extra": "^11.2.0",
     "nodemon": "^3.0.2",
-    "rimraf": "^5.0.5",
-    "fs-extra": "^11.2.0"
+    "rimraf": "^5.0.5"
   }
 }

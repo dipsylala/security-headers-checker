@@ -14,7 +14,7 @@ const http = require('http');
 function performSecurityAnalysis(url) {
     return new Promise((resolve, reject) => {
         const postData = JSON.stringify({ url });
-        
+
         const options = {
             hostname: 'localhost',
             port: 3000,
@@ -25,14 +25,14 @@ function performSecurityAnalysis(url) {
                 'Content-Length': Buffer.byteLength(postData)
             }
         };
-        
+
         const req = http.request(options, (res) => {
             let data = '';
-            
+
             res.on('data', (chunk) => {
                 data += chunk;
             });
-            
+
             res.on('end', () => {
                 try {
                     const result = JSON.parse(data);
@@ -46,11 +46,11 @@ function performSecurityAnalysis(url) {
                 }
             });
         });
-        
+
         req.on('error', (error) => {
             reject(new Error(`Request failed: ${error.message}`));
         });
-        
+
         req.write(postData);
         req.end();
     });
@@ -58,7 +58,7 @@ function performSecurityAnalysis(url) {
 
 async function runIntegrationTests() {
     console.log('🧪 Starting Comprehensive Integration Tests...\n');
-    
+
     const tests = [
         {
             name: 'GitHub Comprehensive Analysis',
@@ -132,22 +132,22 @@ async function runIntegrationTests() {
             }
         }
     ];
-    
+
     const results = [];
-    
+
     for (const test of tests) {
         console.log(`🔍 Testing: ${test.name}`);
         console.log(`📡 URL: ${test.url}`);
-        
+
         try {
             const analysis = await performSecurityAnalysis(test.url);
-            
+
             // Basic assertions
             assert(analysis.ssl, 'SSL analysis should be present');
             assert(analysis.headers, 'Headers analysis should be present');
             assert(analysis.additional, 'Additional checks should be present');
             assert(typeof analysis.score === 'number', 'Score should be a number');
-            
+
             // SSL Certificate Tests
             const ssl = analysis.ssl;
             console.log(`🔒 SSL Valid: ${ssl.valid}`);
@@ -155,57 +155,57 @@ async function runIntegrationTests() {
             console.log(`🔑 Key Length: ${ssl.keyLength} bits`);
             console.log(`📜 Signature Algorithm: ${ssl.signatureAlgorithm}`);
             console.log(`🎯 Grade: ${ssl.grade}`);
-            
+
             if (ssl.gradeExplanation) {
                 console.log(`💬 Explanation: ${ssl.gradeExplanation}`);
             }
-            
+
             // Security Headers Tests
             console.log(`📋 Headers Analysis:`);
             const criticalHeaders = analysis.headers.filter(h => h.category === 'critical');
             const presentCriticalHeaders = criticalHeaders.filter(h => h.present).length;
             console.log(`   Critical headers present: ${presentCriticalHeaders}/${criticalHeaders.length}`);
-            
+
             const importantHeaders = analysis.headers.filter(h => h.category === 'important');
             const presentImportantHeaders = importantHeaders.filter(h => h.present).length;
             console.log(`   Important headers present: ${presentImportantHeaders}/${importantHeaders.length}`);
-            
+
             // Additional Security Checks Tests
             console.log(`� Additional Checks:`);
             analysis.additional.forEach(check => {
                 console.log(`   ${check.name}: ${check.status} - ${check.details}`);
             });
-            
+
             // Test signature algorithm extraction
             const signatureAlgorithmTests = {
                 isNotUnknown: ssl.signatureAlgorithm !== 'Unknown',
                 isNotUnavailable: !ssl.signatureAlgorithm.includes('unavailable'),
                 hasAlgorithmInfo: ssl.signatureAlgorithm && ssl.signatureAlgorithm.length > 0
             };
-            
+
             console.log(`🧬 Signature Algorithm Tests:`);
             console.log(`   ✓ Not Unknown: ${signatureAlgorithmTests.isNotUnknown}`);
             console.log(`   ✓ Not Unavailable: ${signatureAlgorithmTests.isNotUnavailable}`);
             console.log(`   ✓ Has Info: ${signatureAlgorithmTests.hasAlgorithmInfo}`);
-            
+
             // Expected results validation
             let testPassed = true;
             const testErrors = [];
-            
+
             // SSL validation
             if (test.expectedResults.ssl.valid !== undefined) {
                 try {
-                    assert.strictEqual(ssl.valid, test.expectedResults.ssl.valid, 
+                    assert.strictEqual(ssl.valid, test.expectedResults.ssl.valid,
                         `SSL validity should be ${test.expectedResults.ssl.valid}`);
                 } catch (e) {
                     testErrors.push(e.message);
                     testPassed = false;
                 }
             }
-            
+
             if (test.expectedResults.ssl.protocol) {
-                const expectedProtocols = Array.isArray(test.expectedResults.ssl.protocol) 
-                    ? test.expectedResults.ssl.protocol 
+                const expectedProtocols = Array.isArray(test.expectedResults.ssl.protocol)
+                    ? test.expectedResults.ssl.protocol
                     : [test.expectedResults.ssl.protocol];
                 try {
                     assert(expectedProtocols.includes(ssl.protocol),
@@ -215,7 +215,7 @@ async function runIntegrationTests() {
                     testPassed = false;
                 }
             }
-            
+
             if (test.expectedResults.ssl.keyLength) {
                 try {
                     assert.strictEqual(ssl.keyLength, test.expectedResults.ssl.keyLength,
@@ -225,7 +225,7 @@ async function runIntegrationTests() {
                     testPassed = false;
                 }
             }
-            
+
             if (test.expectedResults.ssl.gradeExpectation) {
                 try {
                     assert(test.expectedResults.ssl.gradeExpectation.includes(ssl.grade),
@@ -235,7 +235,7 @@ async function runIntegrationTests() {
                     testPassed = false;
                 }
             }
-            
+
             // Headers validation - more realistic expectations
             if (test.expectedResults.headers?.shouldHaveHSTS) {
                 const hstsHeader = analysis.headers.find(h => h.name.toLowerCase() === 'strict-transport-security');
@@ -246,17 +246,18 @@ async function runIntegrationTests() {
                     testPassed = false;
                 }
             }
-            
+
             if (test.expectedResults.headers?.shouldHaveCSP) {
                 const cspHeader = analysis.headers.find(h => h.name.toLowerCase() === 'content-security-policy');
                 try {
                     assert(cspHeader && cspHeader.present, 'Content-Security-Policy header should be present');
+                // eslint-disable-next-line no-unused-vars
                 } catch (e) {
                     // Don't fail test for missing CSP - just log it
                     console.log(`   ⚠️  CSP header not found (this is common and OK for testing)`);
                 }
             }
-            
+
             if (test.expectedResults.headers?.shouldCheckBasic) {
                 // Just validate that we got some headers back
                 try {
@@ -266,7 +267,7 @@ async function runIntegrationTests() {
                     testPassed = false;
                 }
             }
-            
+
             // Additional checks validation - more lenient
             if (test.expectedResults.additional) {
                 Object.keys(test.expectedResults.additional).forEach(checkKey => {
@@ -279,17 +280,17 @@ async function runIntegrationTests() {
                         case 'mixedContent': checkName = 'Mixed Content'; break;
                         default: checkName = checkKey;
                     }
-                    
+
                     const check = analysis.additional.find(c => c.name === checkName);
                     try {
                         assert(check, `${checkName} check should be present`);
                         // For HTTP Methods, accept 'info' or 'pass' as success since server behavior varies
                         if (checkKey === 'httpMethods' && expectedStatus === 'pass') {
                             const acceptableStatuses = ['pass', 'info'];
-                            assert(acceptableStatuses.includes(check.status), 
+                            assert(acceptableStatuses.includes(check.status),
                                 `${checkName} should have status ${expectedStatus} or info (acceptable variation), got ${check.status}`);
                         } else {
-                            assert.strictEqual(check.status, expectedStatus, 
+                            assert.strictEqual(check.status, expectedStatus,
                                 `${checkName} should have status ${expectedStatus}, got ${check.status}`);
                         }
                     } catch (e) {
@@ -303,7 +304,7 @@ async function runIntegrationTests() {
                     }
                 });
             }
-            
+
             results.push({
                 test: test.name,
                 url: test.url,
@@ -336,13 +337,13 @@ async function runIntegrationTests() {
                 })),
                 score: analysis.score
             });
-            
+
             if (testPassed) {
                 console.log(`✅ ${test.name} PASSED\n`);
             } else {
                 console.log(`❌ ${test.name} FAILED: ${testErrors.join('; ')}\n`);
             }
-            
+
         } catch (error) {
             console.error(`❌ ${test.name} FAILED: ${error.message}`);
             results.push({
@@ -354,17 +355,17 @@ async function runIntegrationTests() {
             console.log('');
         }
     }
-    
+
     // Comprehensive Summary
     console.log('📊 Comprehensive Integration Test Summary:');
     console.log('═'.repeat(60));
-    
+
     const passed = results.filter(r => r.passed).length;
     const total = results.length;
-    
+
     console.log(`✅ Overall Results: ${passed}/${total} tests passed`);
     console.log(`❌ Failed: ${total - passed}/${total}`);
-    
+
     if (passed < total) {
         console.log('\n🔍 Failed Tests:');
         results.filter(r => !r.passed).forEach(result => {
@@ -376,14 +377,14 @@ async function runIntegrationTests() {
             }
         });
     }
-    
+
     // SSL Analysis Summary
     console.log('\n🔒 SSL Certificate Analysis Summary:');
     console.log('─'.repeat(40));
     const sslResults = results.filter(r => r.passed && r.ssl);
     const workingSignatureAlgorithms = sslResults.filter(r => r.ssl.signatureAlgorithmWorking).length;
     console.log(`Working signature detection: ${workingSignatureAlgorithms}/${sslResults.length}`);
-    
+
     if (sslResults.length > 0) {
         const gradeDistribution = {};
         sslResults.forEach(r => {
@@ -394,7 +395,7 @@ async function runIntegrationTests() {
             console.log(`   ${grade}: ${gradeDistribution[grade]} site(s)`);
         });
     }
-    
+
     // Headers Analysis Summary
     console.log('\n📋 Security Headers Analysis Summary:');
     console.log('─'.repeat(40));
@@ -403,12 +404,12 @@ async function runIntegrationTests() {
         const avgCriticalHeaders = headerResults.reduce((sum, r) => sum + r.headers.critical.present, 0) / headerResults.length;
         const avgImportantHeaders = headerResults.reduce((sum, r) => sum + r.headers.important.present, 0) / headerResults.length;
         const avgTotalHeaders = headerResults.reduce((sum, r) => sum + r.headers.present, 0) / headerResults.length;
-        
+
         console.log(`Average critical headers present: ${avgCriticalHeaders.toFixed(1)}`);
         console.log(`Average important headers present: ${avgImportantHeaders.toFixed(1)}`);
         console.log(`Average total headers present: ${avgTotalHeaders.toFixed(1)}`);
     }
-    
+
     // Additional Checks Summary
     console.log('\n🔧 Additional Security Checks Summary:');
     console.log('─'.repeat(40));
@@ -423,15 +424,16 @@ async function runIntegrationTests() {
                 checkStats[check.name][check.status] = (checkStats[check.name][check.status] || 0) + 1;
             });
         });
-        
+
         Object.keys(checkStats).forEach(checkName => {
             const stats = checkStats[checkName];
             const total = Object.values(stats).reduce((sum, count) => sum + count, 0);
             console.log(`${checkName}:`);
-            console.log(`   Pass: ${stats.pass}/${total}, Warning: ${stats.warning}/${total}, Info: ${stats.info}/${total}, Fail: ${stats.fail || 0}/${total}`);
+            console.log(`   Pass: ${stats.pass}/${total}, Warning: ${stats.warning}/${total}, ` +
+                       `Info: ${stats.info}/${total}, Fail: ${stats.fail || 0}/${total}`);
         });
     }
-    
+
     // Security Score Summary
     console.log('\n🎯 Security Score Summary:');
     console.log('─'.repeat(40));
@@ -441,23 +443,23 @@ async function runIntegrationTests() {
         const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
         const maxScore = Math.max(...scores);
         const minScore = Math.min(...scores);
-        
+
         console.log(`Average security score: ${avgScore.toFixed(1)}/100`);
         console.log(`Highest score: ${maxScore}/100`);
         console.log(`Lowest score: ${minScore}/100`);
-        
+
         scoreResults.forEach(result => {
             console.log(`   ${result.test.split(' ')[0]}: ${result.score}/100`);
         });
     }
-    
+
     if (workingSignatureAlgorithms < sslResults.length) {
         console.log('\n⚠️  Signature Algorithm Issues Found:');
         results.filter(r => r.passed && r.ssl && !r.ssl.signatureAlgorithmWorking).forEach(result => {
             console.log(`   • ${result.test}: ${result.ssl.signatureAlgorithm}`);
         });
     }
-    
+
     return results;
 }
 

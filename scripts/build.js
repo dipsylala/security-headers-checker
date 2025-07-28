@@ -41,13 +41,15 @@ async function build() {
         for (const file of SOURCE_FILES) {
             const sourcePath = path.join(__dirname, '..', file);
             const destPath = path.join(__dirname, '..', BUILD_DIR, file);
-            
+
+            // eslint-disable-next-line no-await-in-loop
             if (await fs.pathExists(sourcePath)) {
+                // eslint-disable-next-line no-await-in-loop
                 await fs.copy(sourcePath, destPath, {
                     filter: (src) => {
                         // Exclude test files and development files
                         const relativePath = path.relative(path.join(__dirname, '..'), src);
-                        return !EXCLUDE_PATTERNS.some(pattern => 
+                        return !EXCLUDE_PATTERNS.some(pattern =>
                             relativePath.includes(pattern) || relativePath.endsWith('.test.js')
                         );
                     }
@@ -62,7 +64,7 @@ async function build() {
         // Create production package.json
         console.log('📦 Creating production package.json...');
         const packageJson = await fs.readJson(path.join(__dirname, '..', 'package.json'));
-        
+
         // Remove dev dependencies and scripts
         const productionPackageJson = {
             ...packageJson,
@@ -72,7 +74,7 @@ async function build() {
             },
             devDependencies: undefined
         };
-        
+
         await fs.writeJson(
             path.join(__dirname, '..', BUILD_DIR, 'package.json'),
             productionPackageJson,
@@ -83,14 +85,14 @@ async function build() {
         // Install production dependencies
         console.log('📥 Installing production dependencies...');
         const { spawn } = require('child_process');
-        
+
         await new Promise((resolve, reject) => {
             const npm = spawn('npm', ['install', '--production'], {
                 cwd: path.join(__dirname, '..', BUILD_DIR),
                 stdio: 'inherit',
                 shell: true
             });
-            
+
             npm.on('close', (code) => {
                 if (code === 0) {
                     resolve();
@@ -103,7 +105,7 @@ async function build() {
 
         // Create startup script
         console.log('🚀 Creating startup scripts...');
-        
+
         // Create start.bat for Windows
         const startBat = `@echo off
 echo Starting Security Headers Checker...
@@ -114,7 +116,7 @@ echo.
 node server.js
 `;
         await fs.writeFile(path.join(__dirname, '..', BUILD_DIR, 'start.bat'), startBat);
-        
+
         // Create start.sh for Linux/Mac
         const startSh = `#!/bin/bash
 echo "Starting Security Headers Checker..."
@@ -125,14 +127,15 @@ echo ""
 node server.js
 `;
         await fs.writeFile(path.join(__dirname, '..', BUILD_DIR, 'start.sh'), startSh);
-        
+
         // Make start.sh executable (on Unix systems)
         try {
             await fs.chmod(path.join(__dirname, '..', BUILD_DIR, 'start.sh'), '755');
+        // eslint-disable-next-line no-unused-vars
         } catch (error) {
             // Ignore chmod errors on Windows
         }
-        
+
         console.log('✅ Startup scripts created\n');
 
         // Create deployment README
@@ -181,7 +184,7 @@ npm start
 This build includes only production files and dependencies. 
 Development tools, tests, and build scripts have been excluded.
 `;
-        
+
         await fs.writeFile(path.join(__dirname, '..', BUILD_DIR, 'DEPLOYMENT.md'), deploymentReadme);
         console.log('✅ Deployment README created\n');
 
@@ -189,7 +192,7 @@ Development tools, tests, and build scripts have been excluded.
         console.log('🎉 Build completed successfully!\n');
         console.log('📊 Build Summary:');
         console.log('================');
-        
+
         const buildStats = await getBuildStats(path.join(__dirname, '..', BUILD_DIR));
         console.log(`📁 Build directory: ./${BUILD_DIR}/`);
         console.log(`📄 Files: ${buildStats.fileCount}`);
@@ -213,12 +216,14 @@ async function getBuildStats(buildPath) {
 
     async function traverse(dir) {
         const items = await fs.readdir(dir);
-        
+
         for (const item of items) {
             const itemPath = path.join(dir, item);
+            // eslint-disable-next-line no-await-in-loop
             const stats = await fs.stat(itemPath);
-            
+
             if (stats.isDirectory()) {
+                // eslint-disable-next-line no-await-in-loop
                 await traverse(itemPath);
             } else {
                 fileCount++;
@@ -226,17 +231,17 @@ async function getBuildStats(buildPath) {
             }
         }
     }
-    
+
     await traverse(buildPath);
     return { fileCount, totalSize };
 }
 
 function formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) { return '0 Bytes'; }
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2)) } ${ sizes[i]}`;
 }
 
 // Run the build

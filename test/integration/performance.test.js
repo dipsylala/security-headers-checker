@@ -14,7 +14,7 @@ const http = require('http');
 function performSecurityAnalysis(url) {
     return new Promise((resolve, reject) => {
         const postData = JSON.stringify({ url });
-        
+
         const options = {
             hostname: 'localhost',
             port: 3000,
@@ -25,14 +25,14 @@ function performSecurityAnalysis(url) {
                 'Content-Length': Buffer.byteLength(postData)
             }
         };
-        
+
         const req = http.request(options, (res) => {
             let data = '';
-            
+
             res.on('data', (chunk) => {
                 data += chunk;
             });
-            
+
             res.on('end', () => {
                 try {
                     const result = JSON.parse(data);
@@ -46,11 +46,11 @@ function performSecurityAnalysis(url) {
                 }
             });
         });
-        
+
         req.on('error', (error) => {
             reject(error);
         });
-        
+
         req.write(postData);
         req.end();
     });
@@ -88,53 +88,58 @@ const ERROR_HANDLING_TESTS = [
 
 async function runPerformanceTests() {
     console.log('⚡ Starting Performance and Reliability Integration Tests...\n');
-    
+
     const results = [];
-    
+
     // Performance Tests
     console.log('🚀 Performance Tests:');
     console.log('─'.repeat(30));
-    
+
     for (const test of PERFORMANCE_TEST_SITES) {
         console.log(`🔍 Testing: ${test.name}`);
         console.log(`📡 URL: ${test.url}`);
         console.log(`⏱️  Timeout: ${test.timeout}ms`);
-        
+
         const startTime = Date.now();
-        
+
         try {
             const timeoutPromise = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Timeout')), test.timeout)
             );
-            
+
             const analysis = await Promise.race([
                 performSecurityAnalysis(test.url),
                 timeoutPromise
             ]);
-            
+
             const responseTime = Date.now() - startTime;
-            
+
             console.log(`⏱️  Response Time: ${responseTime}ms`);
             console.log(`🎯 Security Score: ${analysis.security?.score || 'N/A'}/100`);
             console.log(`🔒 SSL Grade: ${analysis.details?.ssl?.grade || 'N/A'}`);
             console.log(`📋 Headers Detected: ${analysis.details?.headers?.headers?.filter(h => h.present).length || 0}`);
             console.log(`🔧 Additional Checks: ${analysis.details?.additional?.checks?.length || 0}`);
-            
+
             // Performance validation
             let testPassed = true;
             const testErrors = [];
-            
+
             try {
-                assert(responseTime < test.timeout, `Response time should be under ${test.timeout}ms, got ${responseTime}ms`);
-                assert(analysis.security?.score >= test.expectedMinScore, `Score should be at least ${test.expectedMinScore}, got ${analysis.security?.score}`);
-                assert(analysis.details?.ssl, 'SSL analysis should be present');
-                assert(analysis.details?.headers && analysis.details.headers.headers && analysis.details.headers.headers.length > 0, 'Headers should be analyzed');
-                assert(analysis.details?.additional && analysis.details.additional.checks && analysis.details.additional.checks.length > 0, 'Additional checks should be present');
+                assert(responseTime < test.timeout,
+                    `Response time should be under ${test.timeout}ms, got ${responseTime}ms`);
+                assert(analysis.security?.score >= test.expectedMinScore,
+                    `Score should be at least ${test.expectedMinScore}, got ${analysis.security?.score}`);
+                assert(analysis.details?.ssl,
+                    'SSL analysis should be present');
+                assert(analysis.details?.headers && analysis.details.headers.headers && analysis.details.headers.headers.length > 0,
+                    'Headers should be analyzed');
+                assert(analysis.details?.additional && analysis.details.additional.checks && analysis.details.additional.checks.length > 0,
+                    'Additional checks should be present');
             } catch (e) {
                 testErrors.push(e.message);
                 testPassed = false;
             }
-            
+
             results.push({
                 test: test.name,
                 url: test.url,
@@ -148,18 +153,18 @@ async function runPerformanceTests() {
                     additionalChecksCount: analysis.additional?.length
                 }
             });
-            
+
             if (testPassed) {
                 console.log(`✅ ${test.name} PASSED\n`);
             } else {
                 console.log(`❌ ${test.name} FAILED: ${testErrors.join('; ')}\n`);
             }
-            
+
         } catch (error) {
             const responseTime = Date.now() - startTime;
             console.log(`⏱️  Response Time: ${responseTime}ms (failed)`);
             console.error(`❌ ${test.name} FAILED: ${error.message}\n`);
-            
+
             results.push({
                 test: test.name,
                 url: test.url,
@@ -172,32 +177,32 @@ async function runPerformanceTests() {
             });
         }
     }
-    
+
     // Error Handling Tests
     console.log('🛡️ Error Handling Tests:');
     console.log('─'.repeat(30));
-    
+
     for (const test of ERROR_HANDLING_TESTS) {
         console.log(`🔍 Testing: ${test.name}`);
         console.log(`📡 URL: ${test.url}`);
         console.log(`❌ Should Fail: ${test.shouldFail}`);
-        
+
         const startTime = Date.now();
-        
+
         try {
             const timeoutPromise = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Timeout')), test.timeout || 10000)
             );
-            
+
             const analysis = await Promise.race([
                 performSecurityAnalysis(test.url),
                 timeoutPromise
             ]);
-            
+
             const responseTime = Date.now() - startTime;
-            
+
             console.log(`⏱️  Response Time: ${responseTime}ms`);
-            
+
             if (test.shouldFail) {
                 console.log(`❌ ${test.name} FAILED: Expected failure but got success\n`);
                 results.push({
@@ -220,11 +225,11 @@ async function runPerformanceTests() {
                     }
                 });
             }
-            
+
         } catch (error) {
             const responseTime = Date.now() - startTime;
             console.log(`⏱️  Response Time: ${responseTime}ms (failed)`);
-            
+
             if (test.shouldFail) {
                 console.log(`✅ ${test.name} PASSED (expected failure: ${error.message})\n`);
                 results.push({
@@ -246,23 +251,23 @@ async function runPerformanceTests() {
             }
         }
     }
-    
+
     // Summary
     console.log('📊 Performance and Reliability Test Summary:');
     console.log('═'.repeat(50));
-    
+
     const passed = results.filter(r => r.passed).length;
     const total = results.length;
-    
+
     console.log(`✅ Overall Results: ${passed}/${total} tests passed`);
-    
+
     if (passed < total) {
         console.log('\n❌ Failed Tests:');
         results.filter(r => !r.passed).forEach(result => {
             console.log(`   • ${result.test}: ${result.errors?.join(', ') || result.error}`);
         });
     }
-    
+
     // Performance Statistics
     const performanceResults = results.filter(r => r.performance && r.performance.responseTime);
     if (performanceResults.length > 0) {
@@ -271,11 +276,11 @@ async function runPerformanceTests() {
         const avgResponseTime = responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
         const maxResponseTime = Math.max(...responseTimes);
         const minResponseTime = Math.min(...responseTimes);
-        
+
         console.log(`   Average response time: ${avgResponseTime.toFixed(0)}ms`);
         console.log(`   Fastest response: ${minResponseTime}ms`);
         console.log(`   Slowest response: ${maxResponseTime}ms`);
-        
+
         // Response time breakdown
         console.log('\n⏱️  Response Time Breakdown:');
         performanceResults.forEach(result => {
@@ -283,17 +288,17 @@ async function runPerformanceTests() {
             const timeIcon = time < 2000 ? '🟢' : time < 5000 ? '🟡' : '🔴';
             console.log(`   ${timeIcon} ${result.test.split(' ')[0]}: ${time}ms`);
         });
-        
+
         // Reliability Statistics
         console.log('\n🛡️ Reliability Statistics:');
         const timeouts = results.filter(r => r.performance?.timedOut).length;
         const networkErrors = results.filter(r => r.error && r.error.includes('network')).length;
-        
+
         console.log(`   Timeouts: ${timeouts}/${total}`);
         console.log(`   Network errors: ${networkErrors}/${total}`);
         console.log(`   Success rate: ${((total - timeouts - networkErrors) / total * 100).toFixed(1)}%`);
     }
-    
+
     return results;
 }
 
