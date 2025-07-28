@@ -387,6 +387,37 @@ class SecurityChecker {
         const statusIcon = ssl.valid ? 'fa-check-circle' : 'fa-times-circle';
         const statusText = ssl.valid ? 'Valid' : 'Invalid';
         
+        // Build explanation section
+        let explanationSection = '';
+        if (ssl.gradeExplanation) {
+            explanationSection = `
+                <div class="mt-3 p-3 bg-light rounded">
+                    <h6 class="mb-2">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Grade Explanation
+                    </h6>
+                    <p class="mb-0 text-muted">${ssl.gradeExplanation}</p>
+                </div>
+            `;
+        }
+        
+        // Build recommendations section
+        let recommendationsSection = '';
+        if (ssl.recommendations && ssl.recommendations.length > 0) {
+            const recommendationsList = ssl.recommendations.map(rec => `<li>${rec}</li>`).join('');
+            recommendationsSection = `
+                <div class="mt-3 p-3 bg-light rounded">
+                    <h6 class="mb-2">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Recommendations
+                    </h6>
+                    <ul class="mb-0 text-muted">
+                        ${recommendationsList}
+                    </ul>
+                </div>
+            `;
+        }
+        
         container.innerHTML = `
             <div class="security-item ${statusClass}">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -407,10 +438,10 @@ class SecurityChecker {
                     <div class="ssl-value">${ssl.issuer}</div>
                     
                     <div class="ssl-label">Valid From:</div>
-                    <div class="ssl-value">${new Date(ssl.validFrom).toLocaleDateString()}</div>
+                    <div class="ssl-value">${ssl.validFrom ? new Date(ssl.validFrom).toLocaleDateString() : 'N/A'}</div>
                     
                     <div class="ssl-label">Valid To:</div>
-                    <div class="ssl-value">${new Date(ssl.validTo).toLocaleDateString()}</div>
+                    <div class="ssl-value">${ssl.validTo ? new Date(ssl.validTo).toLocaleDateString() : 'N/A'}</div>
                     
                     <div class="ssl-label">Key Length:</div>
                     <div class="ssl-value">${ssl.keyLength} bits</div>
@@ -418,6 +449,9 @@ class SecurityChecker {
                     <div class="ssl-label">Protocol:</div>
                     <div class="ssl-value">${ssl.protocol}</div>
                 </div>
+                
+                ${explanationSection}
+                ${recommendationsSection}
             </div>
         `;
     }

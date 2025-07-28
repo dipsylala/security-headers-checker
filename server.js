@@ -291,7 +291,9 @@ async function checkSSLCertificate(hostname, port) {
                 keyLength: 0,
                 signatureAlgorithm: 'N/A',
                 protocol: 'N/A',
-                grade: 'F'
+                grade: 'F',
+                gradeExplanation: 'SSL certificate analysis is only available for HTTPS connections (ports 443, 8443)',
+                recommendations: ['Use HTTPS instead of HTTP', 'Ensure the website supports SSL/TLS encryption']
             });
             return;
         }
@@ -305,8 +307,32 @@ async function checkSSLCertificate(hostname, port) {
 
         const socket = tls.connect(options, () => {
             try {
-                const cert = socket.getPeerCertificate();
+                const cert = socket.getPeerCertificate(true); // Get detailed certificate info
                 const protocol = socket.getProtocol();
+                
+                // Extract signature algorithm with fallbacks
+                let signatureAlgorithm = 'Unknown';
+                if (cert.sigalg) {
+                    signatureAlgorithm = cert.sigalg;
+                } else if (cert.signatureAlgorithm) {
+                    signatureAlgorithm = cert.signatureAlgorithm;
+                } else if (cert.serialNumber && cert.raw) {
+                    // Try to extract from certificate data
+                    try {
+                        const certDetails = socket.getPeerCertificate(true);
+                        if (certDetails.infoAccess || certDetails.ext_key_usage) {
+                            signatureAlgorithm = 'Available in certificate';
+                        }
+                    } catch (e) {
+                        console.log('Could not extract detailed certificate info:', e.message);
+                    }
+                }
+                
+                // Debug log for troubleshooting
+                console.log('Certificate properties available:', Object.keys(cert));
+                console.log('Signature algorithm found:', signatureAlgorithm);
+                
+                const gradeInfo = calculateSSLGrade(cert, protocol, socket.authorized, signatureAlgorithm);
                 
                 resolve({
                     valid: !socket.authorized ? false : true,
@@ -316,13 +342,17 @@ async function checkSSLCertificate(hostname, port) {
                     validFrom: cert.valid_from || null,
                     validTo: cert.valid_to || null,
                     keyLength: cert.bits || 0,
-                    signatureAlgorithm: cert.sigalg || 'Unknown',
+                    signatureAlgorithm: signatureAlgorithm,
                     protocol: protocol || 'Unknown',
-                    grade: calculateSSLGrade(cert, protocol, socket.authorized)
+                    grade: gradeInfo.grade,
+                    gradeExplanation: gradeInfo.explanation,
+                    recommendations: gradeInfo.recommendations
                 });
                 
                 socket.end();
             } catch (error) {
+                const gradeInfo = { grade: 'F', explanation: error.message, recommendations: ['Fix SSL certificate configuration'] };
+                
                 resolve({
                     valid: false,
                     error: error.message,
@@ -333,13 +363,17 @@ async function checkSSLCertificate(hostname, port) {
                     keyLength: 0,
                     signatureAlgorithm: 'Unknown',
                     protocol: 'Unknown',
-                    grade: 'F'
+                    grade: gradeInfo.grade,
+                    gradeExplanation: gradeInfo.explanation,
+                    recommendations: gradeInfo.recommendations
                 });
                 socket.end();
             }
         });
 
         socket.on('error', (error) => {
+            const gradeInfo = { grade: 'F', explanation: `Connection error: ${error.message}`, recommendations: ['Check if the website supports HTTPS', 'Verify the hostname is correct'] };
+            
             resolve({
                 valid: false,
                 error: error.message,
@@ -350,12 +384,16 @@ async function checkSSLCertificate(hostname, port) {
                 keyLength: 0,
                 signatureAlgorithm: 'Unknown',
                 protocol: 'Unknown',
-                grade: 'F'
+                grade: gradeInfo.grade,
+                gradeExplanation: gradeInfo.explanation,
+                recommendations: gradeInfo.recommendations
             });
         });
 
         socket.setTimeout(10000, () => {
             socket.destroy();
+            const gradeInfo = { grade: 'F', explanation: 'Connection timeout - server did not respond within 10 seconds', recommendations: ['Check if the server is online', 'Verify firewall settings allow HTTPS connections'] };
+            
             resolve({
                 valid: false,
                 error: 'Connection timeout',
@@ -366,54 +404,139 @@ async function checkSSLCertificate(hostname, port) {
                 keyLength: 0,
                 signatureAlgorithm: 'Unknown',
                 protocol: 'Unknown',
-                grade: 'F'
+                grade: gradeInfo.grade,
+                gradeExplanation: gradeInfo.explanation,
+                recommendations: gradeInfo.recommendations
             });
         });
     });
 }
 
-// Calculate SSL Grade
-function calculateSSLGrade(cert, protocol, authorized) {
-    if (!authorized) return 'F';
-    
+// Calculate SSL Grade with detailed explanations
+function calculateSSLGrade(cert, protocol, authorized, signatureAlgorithm = null) {
+    const issues = [];
+    const recommendations = [];
     let score = 0;
+    let explanation = '';
     
-    // Protocol scoring
-    if (protocol === 'TLSv1.3') score += 30;
-    else if (protocol === 'TLSv1.2') score += 25;
-    else if (protocol === 'TLSv1.1') score += 15;
-    else if (protocol === 'TLSv1') score += 10;
-    else score += 0;
+    // Check authorization first
+    if (!authorized) {
+        return {
+            grade: 'F',
+            explanation: 'SSL certificate is not trusted or has critical security issues',
+            recommendations: ['Install a valid SSL certificate from a trusted Certificate Authority', 'Check certificate chain configuration', 'Verify hostname matches certificate']
+        };
+    }
     
-    // Key length scoring
-    if (cert.bits >= 4096) score += 30;
-    else if (cert.bits >= 2048) score += 25;
-    else if (cert.bits >= 1024) score += 15;
-    else score += 0;
+    // Protocol scoring and analysis
+    if (protocol === 'TLSv1.3') {
+        score += 30;
+    } else if (protocol === 'TLSv1.2') {
+        score += 25;
+    } else if (protocol === 'TLSv1.1') {
+        score += 15;
+        issues.push('Using outdated TLS 1.1 protocol');
+        recommendations.push('Upgrade to TLS 1.2 or 1.3 for better security');
+    } else if (protocol === 'TLSv1') {
+        score += 10;
+        issues.push('Using deprecated TLS 1.0 protocol');
+        recommendations.push('Immediately upgrade to TLS 1.2 or 1.3 - TLS 1.0 is insecure');
+    } else {
+        issues.push('Unknown or unsupported TLS protocol');
+        recommendations.push('Configure server to use TLS 1.2 or 1.3');
+    }
     
-    // Certificate validity
+    // Key length scoring and analysis
+    const keyLength = cert.bits || 0;
+    if (keyLength >= 4096) {
+        score += 30;
+    } else if (keyLength >= 2048) {
+        score += 25;
+    } else if (keyLength >= 1024) {
+        score += 15;
+        issues.push(`Weak key length: ${keyLength} bits`);
+        recommendations.push('Use at least 2048-bit RSA keys or 256-bit ECC keys');
+    } else if (keyLength > 0) {
+        issues.push(`Very weak key length: ${keyLength} bits`);
+        recommendations.push('Immediately upgrade to at least 2048-bit RSA keys');
+    } else {
+        issues.push('Key length information unavailable');
+    }
+    
+    // Certificate validity analysis
     if (cert.valid_from && cert.valid_to) {
         const now = new Date();
         const validFrom = new Date(cert.valid_from);
         const validTo = new Date(cert.valid_to);
+        const daysUntilExpiry = Math.ceil((validTo - now) / (1000 * 60 * 60 * 24));
         
         if (now >= validFrom && now <= validTo) {
             score += 20;
+            if (daysUntilExpiry <= 30) {
+                issues.push(`Certificate expires soon (${daysUntilExpiry} days)`);
+                recommendations.push('Renew SSL certificate before expiration');
+            }
+        } else if (now > validTo) {
+            issues.push('Certificate has expired');
+            recommendations.push('Renew SSL certificate immediately');
+        } else if (now < validFrom) {
+            issues.push('Certificate is not yet valid');
+            recommendations.push('Check system clock or certificate validity dates');
         }
+    } else {
+        issues.push('Certificate validity dates unavailable');
     }
     
-    // Signature algorithm
-    if (cert.sigalg && (cert.sigalg.includes('SHA256') || cert.sigalg.includes('SHA384') || cert.sigalg.includes('SHA512'))) {
-        score += 20;
+    // Signature algorithm analysis - use provided parameter or fallback to cert property
+    const sigAlg = signatureAlgorithm || cert.sigalg || '';
+    if (sigAlg && sigAlg !== 'Unknown') {
+        if (sigAlg.includes('SHA256') || sigAlg.includes('SHA384') || sigAlg.includes('SHA512')) {
+            score += 20;
+        } else if (sigAlg.includes('SHA1')) {
+            issues.push('Using deprecated SHA-1 signature algorithm');
+            recommendations.push('Upgrade to SHA-256 or higher signature algorithm');
+        } else if (sigAlg.includes('MD5')) {
+            issues.push('Using insecure MD5 signature algorithm');
+            recommendations.push('Immediately upgrade to SHA-256 or higher - MD5 is cryptographically broken');
+        } else if (sigAlg.toLowerCase() !== 'available in certificate') {
+            issues.push(`Unknown signature algorithm: ${sigAlg}`);
+            recommendations.push('Verify signature algorithm is secure (SHA-256 or higher)');
+        } else {
+            // Certificate has signature algorithm but we couldn't extract the specific type
+            score += 10; // Give partial credit
+            issues.push('Signature algorithm present but details not extracted');
+        }
+    } else {
+        issues.push('Signature algorithm information unavailable - this may indicate an issue with certificate analysis');
+        recommendations.push('This is likely a limitation of our analysis tool rather than your certificate');
     }
     
-    // Convert score to grade
-    if (score >= 90) return 'A+';
-    if (score >= 80) return 'A';
-    if (score >= 70) return 'B';
-    if (score >= 60) return 'C';
-    if (score >= 50) return 'D';
-    return 'F';
+    // Determine grade
+    let grade;
+    if (score >= 90) grade = 'A+';
+    else if (score >= 80) grade = 'A';
+    else if (score >= 70) grade = 'B';
+    else if (score >= 60) grade = 'C';
+    else if (score >= 50) grade = 'D';
+    else grade = 'F';
+    
+    // Build explanation
+    if (issues.length === 0) {
+        explanation = `Excellent SSL configuration! Protocol: ${protocol}, Key: ${keyLength} bits, Signature: ${sigAlg || 'Unknown'}`;
+    } else {
+        explanation = `Issues found: ${issues.join('; ')}. Protocol: ${protocol}, Key: ${keyLength} bits, Signature: ${sigAlg || 'Unknown'}`;
+    }
+    
+    // Add default recommendations if none exist
+    if (recommendations.length === 0) {
+        recommendations.push('SSL configuration is optimal');
+    }
+    
+    return {
+        grade,
+        explanation,
+        recommendations
+    };
 }
 
 // Check security headers
