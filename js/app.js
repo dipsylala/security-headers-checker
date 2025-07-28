@@ -865,13 +865,19 @@ class SecurityChecker {
             return ''; // No chain or only leaf certificate
         }
 
+        const chainId = `chain-${Date.now()}`; // Unique ID for this chain
+        
         let html = `
             <div class="certificate-chain mb-4">
                 <h6 class="mb-3">
-                    <i class="fas fa-link me-2"></i>
-                    Certificate Chain <span class="badge bg-info">${certificateDetails.chain.length} certificates</span>
+                    <button class="btn btn-link p-0 text-decoration-none fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#${chainId}" aria-expanded="false" aria-controls="${chainId}">
+                        <i class="fas fa-link me-2"></i>
+                        Certificate Chain <span class="badge bg-info">${certificateDetails.chain.length} certificates</span>
+                        <i class="fas fa-chevron-down ms-2 collapse-icon"></i>
+                    </button>
                 </h6>
-                <div class="chain-container">
+                <div class="collapse" id="${chainId}">
+                    <div class="chain-container border rounded p-3 bg-light">
         `;
 
         certificateDetails.chain.forEach((cert, index) => {
@@ -959,6 +965,7 @@ class SecurityChecker {
         });
 
         html += `
+                    </div>
                 </div>
             </div>
         `;

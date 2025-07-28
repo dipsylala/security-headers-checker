@@ -544,6 +544,38 @@ body {
     position: relative;
 }
 
+/* Collapsible Certificate Chain Styles */
+.certificate-chain .btn-link {
+    color: inherit;
+    border: none;
+    background: none;
+    font-size: inherit;
+    text-align: left;
+    width: 100%;
+}
+
+.certificate-chain .btn-link:hover {
+    color: #0d6efd;
+    text-decoration: none !important;
+}
+
+.certificate-chain .btn-link:focus {
+    box-shadow: none;
+}
+
+.certificate-chain .collapse-icon {
+    transition: transform 0.2s ease-in-out;
+    font-size: 0.8em;
+}
+
+.certificate-chain .btn-link[aria-expanded="true"] .collapse-icon {
+    transform: rotate(180deg);
+}
+
+.certificate-chain .chain-container {
+    transition: all 0.3s ease;
+}
+
 /* Responsive adjustments for certificate chain */
 @media (max-width: 768px) {
     .certificate-item .row {
