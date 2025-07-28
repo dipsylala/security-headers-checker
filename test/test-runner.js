@@ -4,6 +4,7 @@
  */
 
 const { runSSLTests } = require('./integration/ssl-certificate.test.js');
+const { runEnhancedSSLTests } = require('./integration/enhanced-ssl.test.js');
 const { runHeadersTests } = require('./integration/security-headers.test.js');
 const { runAdditionalChecksTests } = require('./integration/additional-checks.test.js');
 const { runPerformanceTests } = require('./integration/performance.test.js');
@@ -17,6 +18,7 @@ async function runAllTests() {
 
     const results = {
         ssl: { passed: 0, failed: 0, details: [] },
+        enhancedSsl: { passed: 0, failed: 0, details: [] },
         headers: { passed: 0, failed: 0, details: [] },
         additional: { passed: 0, failed: 0, details: [] },
         performance: { passed: 0, failed: 0, details: [] }
@@ -45,6 +47,28 @@ async function runAllTests() {
     } catch (error) {
         console.error(`❌ SSL Tests failed: ${error.message}`);
         results.ssl.failed++;
+        allPassed = false;
+    }
+
+    try {
+        // Run Enhanced SSL Tests
+        console.log('\n🔐 Running Enhanced SSL Tests...');
+        console.log('-'.repeat(40));
+        const enhancedSslTestResults = await runEnhancedSSLTests();
+
+        if (enhancedSslTestResults.passed > 0) {
+            results.enhancedSsl.passed += enhancedSslTestResults.passed;
+        }
+        if (enhancedSslTestResults.failed > 0) {
+            results.enhancedSsl.failed += enhancedSslTestResults.failed;
+            allPassed = false;
+        }
+
+        console.log(`Enhanced SSL Tests: ${results.enhancedSsl.passed} passed, ${results.enhancedSsl.failed} failed`);
+
+    } catch (error) {
+        console.error(`❌ Enhanced SSL Tests failed: ${error.message}`);
+        results.enhancedSsl.failed++;
         allPassed = false;
     }
 
@@ -124,9 +148,9 @@ async function runAllTests() {
     console.log('\n📊 Test Suite Summary');
     console.log('=' .repeat(50));
 
-    const totalPassed = results.ssl.passed + results.headers.passed +
+    const totalPassed = results.ssl.passed + results.enhancedSsl.passed + results.headers.passed +
                        results.additional.passed + results.performance.passed;
-    const totalFailed = results.ssl.failed + results.headers.failed +
+    const totalFailed = results.ssl.failed + results.enhancedSsl.failed + results.headers.failed +
                        results.additional.failed + results.performance.failed;
 
     console.log(`✅ Total Passed: ${totalPassed}`);
@@ -139,6 +163,7 @@ async function runAllTests() {
         // Show failed test details
         const allResults = [
             ...results.ssl.details,
+            ...results.enhancedSsl.details,
             ...results.headers.details,
             ...results.additional.details,
             ...results.performance.details

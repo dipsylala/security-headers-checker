@@ -14,6 +14,7 @@
     "test": "npm run test:integration",
     "test:integration": "node test/test-runner.js",
     "test:ssl": "node test/integration/ssl-certificate.test.js",
+    "test:enhanced-ssl": "node test/integration/enhanced-ssl.test.js",
     "test:headers": "node test/integration/security-headers.test.js",
     "test:additional": "node test/integration/additional-checks.test.js",
     "test:performance": "node test/integration/performance.test.js",

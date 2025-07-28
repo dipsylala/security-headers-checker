@@ -89,6 +89,7 @@ class SecurityChecker {
                     domain: this.extractDomain(url),
                     timestamp: results.analysis?.timestamp || new Date().toISOString(),
                     ssl: results.details.ssl || {},
+                    detailedSsl: results.details.detailedSsl || null,
                     headers: results.details.headers?.headers || [],
                     additional: results.details.additional?.checks || [],
                     score: results.security?.score || 0,
@@ -274,7 +275,7 @@ class SecurityChecker {
         this.updateOverallScore(results.score);
 
         // Display SSL results
-        this.displaySSLResults(results.ssl);
+        this.displaySSLResults(results.ssl, results.detailedSsl);
 
         // Display headers results
         this.displayHeadersResults(results.headers);
@@ -396,9 +397,136 @@ class SecurityChecker {
         progressContainer.parentElement.insertBefore(boundariesContainer, progressContainer.nextSibling);
     }
 
-    displaySSLResults(ssl) {
+    displaySSLResults(ssl, detailedSsl) {
         const container = document.getElementById('sslResults');
 
+        // Use detailed SSL results if available, otherwise fall back to basic SSL data
+        if (detailedSsl && detailedSsl.certificateDetails) {
+            this.displayDetailedSSLResults(container, detailedSsl);
+        } else {
+            this.displayBasicSSLResults(container, ssl);
+        }
+    }
+
+    displayDetailedSSLResults(container, detailedSsl) {
+        const { certificateDetails, tests, summary } = detailedSsl;
+
+        // Calculate grade class for styling
+        const gradeClass = this.getGradeBadgeClass(summary.grade);
+
+        let html = `
+            <div class="ssl-overview mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="fas fa-certificate me-2"></i>
+                        SSL Certificate Info
+                    </h5>
+                    <div class="ssl-grade-container">
+                        <span class="badge bg-${gradeClass} ssl-grade-badge">${summary.grade}</span>
+                        <small class="text-muted ms-2">${summary.score}/${summary.maxScore}</small>
+                    </div>
+                </div>
+
+                <div class="ssl-test-summary mb-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        <span>${summary.testsPassed}/${summary.testsTotal} tests passed</span>
+                    </div>
+                </div>
+
+                <div class="certificate-details mb-4">
+                    <h6 class="mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Certificate Details
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="cert-detail-item">
+                                <strong>Issuer:</strong>
+                                <span class="text-muted">${certificateDetails.issuer || 'Unknown'}</span>
+                            </div>
+                            <div class="cert-detail-item">
+                                <strong>Subject:</strong>
+                                <span class="text-muted">${certificateDetails.subject || 'Unknown'}</span>
+                            </div>
+                            <div class="cert-detail-item">
+                                <strong>Serial Number:</strong>
+                                <span class="text-muted">${certificateDetails.serialNumber || 'Unknown'}</span>
+                            </div>
+                            <div class="cert-detail-item">
+                                <strong>Key Algorithm:</strong>
+                                <span class="text-muted">${certificateDetails.keyAlgorithm || 'Unknown'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="cert-detail-item">
+                                <strong>Valid From:</strong>
+                                <span class="text-muted">${certificateDetails.validFrom || 'Unknown'}</span>
+                            </div>
+                            <div class="cert-detail-item">
+                                <strong>Valid To:</strong>
+                                <span class="text-muted">${certificateDetails.validTo || 'Unknown'}</span>
+                            </div>
+                            <div class="cert-detail-item">
+                                <strong>Key Length:</strong>
+                                <span class="text-muted">${certificateDetails.keyLength || 'Unknown'} bits</span>
+                            </div>
+                            <div class="cert-detail-item">
+                                <strong>Protocol:</strong>
+                                <span class="text-muted">${certificateDetails.protocol || 'Unknown'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${this.displayCertificateChain(certificateDetails)}
+            </div>
+
+            <div class="ssl-tests">
+                <h6 class="mb-3">
+                    <i class="fas fa-tasks me-2"></i>
+                    SSL Certificate Tests
+                </h6>
+        `;
+
+        // Display individual test results using the same format as Security Headers
+        tests.forEach(test => {
+            const statusClass = this.getSSLStatusClass(test.status);
+            const statusIcon = this.getSSLStatusIcon(test.status);
+            const statusBadge = this.getSSLStatusBadge(test.status);
+            const statusText = this.getSSLStatusText(test.status);
+            
+            html += `
+                <div class="security-item ${statusClass} mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">
+                            <i class="fas ${statusIcon} me-2"></i>
+                            ${test.name}
+                        </h6>
+                        <span class="badge badge-status ${statusBadge}">${statusText}</span>
+                    </div>
+                    
+                    <p class="mb-2 text-muted">${test.description}</p>
+                    
+                    ${test.recommendation ? `
+                        <div class="recommendation">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            ${test.recommendation}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+
+        html += `
+            </div>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    displayBasicSSLResults(container, ssl) {
+        // Fallback to basic SSL display
         const statusClass = ssl.valid ? 'pass' : 'fail';
         const statusIcon = ssl.valid ? 'fa-check-circle' : 'fa-times-circle';
         const statusText = ssl.valid ? 'Valid' : 'Invalid';
@@ -470,6 +598,97 @@ class SecurityChecker {
                 ${recommendationsSection}
             </div>
         `;
+    }
+
+    getTestStatusIcon(status) {
+        switch (status) {
+            case 'PASS':
+                return '<i class="fas fa-check-circle text-success me-2"></i>';
+            case 'FAIL':
+                return '<i class="fas fa-times-circle text-danger me-2"></i>';
+            case 'WARNING':
+                return '<i class="fas fa-exclamation-triangle text-warning me-2"></i>';
+            default:
+                return '<i class="fas fa-question-circle text-muted me-2"></i>';
+        }
+    }
+
+    getTestStatusClass(status) {
+        switch (status) {
+            case 'PASS':
+                return 'test-pass';
+            case 'FAIL':
+                return 'test-fail';
+            case 'WARNING':
+                return 'test-warning';
+            default:
+                return 'test-unknown';
+        }
+    }
+
+    getTestBadgeClass(status) {
+        switch (status) {
+            case 'PASS':
+                return 'success';
+            case 'FAIL':
+                return 'danger';
+            case 'WARNING':
+                return 'warning';
+            default:
+                return 'secondary';
+        }
+    }
+
+    getSSLStatusIcon(status) {
+        switch (status.toLowerCase()) {
+            case 'pass':
+                return 'fa-check-circle';
+            case 'fail':
+                return 'fa-times-circle';
+            case 'warning':
+                return 'fa-exclamation-triangle';
+            default:
+                return 'fa-info-circle';
+        }
+    }
+
+    getSSLStatusBadge(status) {
+        switch (status.toLowerCase()) {
+            case 'pass':
+                return 'bg-success';
+            case 'fail':
+                return 'bg-danger';
+            case 'warning':
+                return 'bg-warning';
+            default:
+                return 'bg-info';
+        }
+    }
+
+    getSSLStatusClass(status) {
+        switch (status.toLowerCase()) {
+            case 'pass':
+                return 'pass';
+            case 'fail':
+                return 'fail';
+            case 'warning':
+                return 'warning';
+            default:
+                return 'info';
+        }
+    }
+
+    getSSLStatusText(status) {
+        switch (status.toLowerCase()) {
+            case 'pass':
+                return 'PASS';
+            case 'fail':
+                return 'FAIL';
+            case 'warning':
+                return 'WARNING';
+            default:
+                return 'UNKNOWN';
+        }
     }
 
     getGradeBadgeClass(grade) {
@@ -638,6 +857,196 @@ class SecurityChecker {
             case 'warning': return 'bg-warning';
             case 'fail': return 'bg-danger';
             default: return 'bg-info';
+        }
+    }
+
+    displayCertificateChain(certificateDetails) {
+        if (!certificateDetails.chain || certificateDetails.chain.length <= 1) {
+            return ''; // No chain or only leaf certificate
+        }
+
+        let html = `
+            <div class="certificate-chain mb-4">
+                <h6 class="mb-3">
+                    <i class="fas fa-link me-2"></i>
+                    Certificate Chain <span class="badge bg-info">${certificateDetails.chain.length} certificates</span>
+                </h6>
+                <div class="chain-container">
+        `;
+
+        certificateDetails.chain.forEach((cert, index) => {
+            const isLeaf = index === 0;
+            const isRoot = cert.isRoot;
+            const validityClass = this.getCertificateValidityClass(cert.validity?.status);
+            const typeIcon = this.getCertificateTypeIcon(cert.type);
+            
+            html += `
+                <div class="certificate-item ${isLeaf ? 'leaf-cert' : ''} ${isRoot ? 'root-cert' : ''} mb-3">
+                    <div class="cert-header d-flex justify-content-between align-items-center mb-2">
+                        <div class="cert-title">
+                            <i class="${typeIcon} me-2"></i>
+                            <strong>${cert.type}</strong>
+                            ${isLeaf ? '<span class="badge bg-primary ms-2">Current</span>' : ''}
+                            ${isRoot ? '<span class="badge bg-success ms-2">Root CA</span>' : ''}
+                        </div>
+                        <div class="cert-status">
+                            <span class="badge bg-${validityClass}">${cert.validity?.status || 'Unknown'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="cert-content">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="cert-detail-item">
+                                    <strong>Subject:</strong>
+                                    <span class="text-muted">${cert.subject || 'Unknown'}</span>
+                                </div>
+                                <div class="cert-detail-item">
+                                    <strong>Issuer:</strong>
+                                    <span class="text-muted">${cert.issuer || 'Unknown'}</span>
+                                </div>
+                                <div class="cert-detail-item">
+                                    <strong>Serial Number:</strong>
+                                    <span class="text-muted font-monospace">${cert.serialNumber || 'Unknown'}</span>
+                                </div>
+                                <div class="cert-detail-item">
+                                    <strong>Key Algorithm:</strong>
+                                    <span class="text-muted">${cert.keyAlgorithm || 'Unknown'}</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="cert-detail-item">
+                                    <strong>Valid From:</strong>
+                                    <span class="text-muted">${this.formatDate(cert.validFrom) || 'Unknown'}</span>
+                                </div>
+                                <div class="cert-detail-item">
+                                    <strong>Valid To:</strong>
+                                    <span class="text-muted">${this.formatDate(cert.validTo) || 'Unknown'}</span>
+                                </div>
+                                <div class="cert-detail-item">
+                                    <strong>Key Length:</strong>
+                                    <span class="text-muted">${cert.keyLength || 'Unknown'} bits</span>
+                                </div>
+                                <div class="cert-detail-item">
+                                    <strong>Signature Algorithm:</strong>
+                                    <span class="text-muted">${cert.signatureAlgorithm || 'Unknown'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        ${this.displayCertificateExtensions(cert)}
+                        ${this.displayOrganizationInfo(cert)}
+                        
+                        <div class="cert-fingerprints mt-2">
+                            <small class="text-muted">
+                                <strong>Fingerprint (SHA-256):</strong> 
+                                <span class="font-monospace">${cert.fingerprint256 || 'Unknown'}</span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Add connection arrow if not the last certificate
+            if (index < certificateDetails.chain.length - 1) {
+                html += `
+                    <div class="chain-arrow text-center mb-3">
+                        <i class="fas fa-arrow-down text-muted"></i>
+                        <small class="text-muted d-block">signed by</small>
+                    </div>
+                `;
+            }
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+
+        return html;
+    }
+
+    displayCertificateExtensions(cert) {
+        if (!cert.extensions) return '';
+        
+        let html = '';
+        const extensions = cert.extensions;
+        
+        if (extensions.subjectAltName || extensions.keyUsage || extensions.isCa) {
+            html += `
+                <div class="cert-extensions mt-2">
+                    <small><strong>Extensions:</strong></small>
+                    <div class="extensions-list">
+            `;
+            
+            if (extensions.subjectAltName) {
+                html += `<span class="badge bg-light text-dark me-1">SAN</span>`;
+            }
+            if (extensions.keyUsage) {
+                html += `<span class="badge bg-light text-dark me-1">Key Usage</span>`;
+            }
+            if (extensions.isCa) {
+                html += `<span class="badge bg-warning text-dark me-1">CA Certificate</span>`;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+        
+        return html;
+    }
+
+    displayOrganizationInfo(cert) {
+        if (!cert.organizationInfo) return '';
+        
+        const org = cert.organizationInfo.subject;
+        if (!org.organization && !org.country) return '';
+        
+        let html = `
+            <div class="organization-info mt-2">
+                <small><strong>Organization:</strong></small>
+                <div class="org-details">
+        `;
+        
+        if (org.organization) {
+            html += `<span class="text-muted">${org.organization}</span>`;
+        }
+        if (org.country) {
+            html += `<span class="text-muted ms-2">(${org.country})</span>`;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+
+    getCertificateValidityClass(status) {
+        switch (status) {
+            case 'Valid': return 'success';
+            case 'Expired': return 'danger';
+            case 'Not Yet Valid': return 'warning';
+            default: return 'secondary';
+        }
+    }
+
+    getCertificateTypeIcon(type) {
+        if (type.includes('Leaf')) return 'fas fa-certificate';
+        if (type.includes('Intermediate')) return 'fas fa-link';
+        if (type.includes('Root')) return 'fas fa-shield-alt';
+        return 'fas fa-certificate';
+    }
+
+    formatDate(dateString) {
+        if (!dateString) return null;
+        try {
+            return new Date(dateString).toLocaleDateString();
+        } catch (e) {
+            return dateString;
         }
     }
 }

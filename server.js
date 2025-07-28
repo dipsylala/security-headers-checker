@@ -10,7 +10,7 @@ const path = require('path');
 
 // Import custom modules
 const { validateUrl, getUrlSecurityAssessment } = require('./lib/url-utils');
-const { checkSSLCertificate } = require('./lib/ssl-analyzer');
+const { checkSSLCertificate, analyzeSSLCertificateDetailed } = require('./lib/ssl-analyzer');
 const { checkSecurityHeaders } = require('./lib/headers-checker');
 const { performAdditionalChecks } = require('./lib/additional-checks');
 const { generateSecurityAssessment } = require('./lib/scoring-system');
@@ -40,6 +40,7 @@ app.get('/api/health', (req, res) => {
         modules: {
             'url-utils': 'loaded',
             'ssl-analyzer': 'loaded',
+            'enhanced-ssl-analyzer': 'loaded',
             'headers-checker': 'loaded',
             'additional-checks': 'loaded',
             'scoring-system': 'loaded'
@@ -83,8 +84,14 @@ app.post('/api/analyze', async (req, res) => {
         // Step 2: Perform parallel security checks
         console.log(`[${new Date().toISOString()}] Performing security checks...`);
 
-        const [sslResult, headersResult, additionalResult] = await Promise.allSettled([
+        // Extract hostname for detailed SSL analysis
+        const urlObj = new URL(validatedUrl);
+        const hostname = urlObj.hostname;
+        const port = urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80);
+
+        const [sslResult, detailedSslResult, headersResult, additionalResult] = await Promise.allSettled([
             checkSSLCertificate(validatedUrl),
+            urlObj.protocol === 'https:' ? analyzeSSLCertificateDetailed(hostname, port) : Promise.resolve(null),
             checkSecurityHeaders(validatedUrl),
             performAdditionalChecks(validatedUrl)
         ]);
@@ -98,6 +105,7 @@ app.post('/api/analyze', async (req, res) => {
                 grade: 'F',
                 score: 0
             },
+            detailedSsl: detailedSslResult.status === 'fulfilled' ? detailedSslResult.value : null,
             headers: headersResult.status === 'fulfilled' ? headersResult.value : {
                 error: headersResult.reason?.message || 'Headers check failed',
                 headers: [],
@@ -147,6 +155,7 @@ app.post('/api/analyze', async (req, res) => {
             details: {
                 url: urlAssessment,
                 ssl: results.ssl,
+                detailedSsl: results.detailedSsl,
                 headers: results.headers,
                 additional: results.additional
             },
@@ -195,7 +204,7 @@ app.get('/api-docs', (req, res) => {
                 response: {
                     analysis: 'Analysis metadata',
                     security: 'Overall security assessment with score and grade',
-                    details: 'Detailed results from each security check',
+                    details: 'Detailed results from each security check (includes enhanced SSL analysis)',
                     warnings: 'Any warnings about the analysis'
                 }
             },
@@ -267,7 +276,7 @@ app.listen(PORT, () => {
     // Log loaded modules
     console.log('📦 Loaded modules:');
     console.log('   ✓ URL Utilities');
-    console.log('   ✓ SSL Analyzer');
+    console.log('   ✓ SSL Analyzer (Comprehensive)');
     console.log('   ✓ Headers Checker');
     console.log('   ✓ Additional Checks');
     console.log('   ✓ Scoring System');

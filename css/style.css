@@ -416,3 +416,145 @@ body {
         transform: translateY(0);
     }
 }
+
+/* SSL Certificate Analysis Styles */
+.ssl-overview {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+}
+
+.ssl-grade-container {
+    display: flex;
+    align-items: center;
+}
+
+.ssl-grade-badge {
+    font-size: 1.1rem;
+    font-weight: bold;
+    padding: 0.5rem 0.75rem;
+}
+
+.ssl-test-summary {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.75rem;
+}
+
+.certificate-details {
+    background-color: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.cert-detail-item {
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.cert-detail-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.cert-detail-item strong {
+    display: inline-block;
+    min-width: 120px;
+    color: #495057;
+}
+
+/* Certificate Chain Styles */
+.certificate-chain {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.certificate-item {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.certificate-item:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.leaf-cert {
+    border-left: 4px solid #007bff;
+}
+
+.root-cert {
+    border-left: 4px solid #28a745;
+}
+
+.cert-header {
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.cert-title {
+    font-weight: 600;
+    color: #495057;
+}
+
+.chain-arrow {
+    color: #6c757d;
+    font-size: 1.2rem;
+}
+
+.chain-arrow i {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.cert-extensions .badge {
+    font-size: 0.7em;
+    margin-right: 0.25rem;
+}
+
+.organization-info {
+    background: #f8f9fa;
+    border-radius: 4px;
+    padding: 0.5rem;
+    font-size: 0.9em;
+}
+
+.cert-fingerprints {
+    background: #f1f3f4;
+    border-radius: 4px;
+    padding: 0.5rem;
+    word-break: break-all;
+}
+
+.chain-container {
+    position: relative;
+}
+
+/* Responsive adjustments for certificate chain */
+@media (max-width: 768px) {
+    .certificate-item .row {
+        margin: 0;
+    }
+    
+    .certificate-item .col-md-6 {
+        padding: 0;
+    }
+    
+    .cert-fingerprints {
+        font-size: 0.8em;
+    }
+}
