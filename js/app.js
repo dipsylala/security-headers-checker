@@ -1093,34 +1093,210 @@ function exportReport(format) {
 function exportToPDF(results, filename) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
+    let yPos = 20;
+    const pageHeight = doc.internal.pageSize.height;
+    const margin = 20;
+    const lineHeight = 10;
+
+    // Helper function to add new page if needed
+    function checkNewPage(neededSpace = 20) {
+        if (yPos + neededSpace > pageHeight - margin) {
+            doc.addPage();
+            yPos = 20;
+        }
+    }
+
+    // Helper function to add text with proper wrapping
+    function addText(text, fontSize = 10, isBold = false) {
+        checkNewPage();
+        doc.setFontSize(fontSize);
+        if (isBold) {
+            doc.setFont(undefined, 'bold');
+        } else {
+            doc.setFont(undefined, 'normal');
+        }
+        doc.text(text, margin, yPos);
+        yPos += lineHeight;
+    }
+
+    // Helper function to add section header
+    function addSectionHeader(title) {
+        checkNewPage(30);
+        yPos += 5; // Extra space before section
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.text(title, margin, yPos);
+        yPos += lineHeight + 5; // Extra space after header
+    }
 
     // Title
-    doc.setFontSize(20);
-    doc.text('Security Headers Report', 20, 20);
+    doc.setFontSize(24);
+    doc.setFont(undefined, 'bold');
+    doc.text('Security Headers Analysis Report', margin, yPos);
+    yPos += 20;
 
-    // URL and timestamp
-    doc.setFontSize(12);
-    doc.text(`URL: ${results.url}`, 20, 35);
-    doc.text(`Generated: ${new Date(results.timestamp).toLocaleString()}`, 20, 45);
-    doc.text(`Security Score: ${results.score}/100`, 20, 55);
+    // Summary Information
+    addSectionHeader('Summary');
+    addText(`URL: ${results.url}`, 12);
+    addText(`Domain: ${results.domain || 'N/A'}`, 12);
+    addText(`Generated: ${new Date(results.timestamp).toLocaleString()}`, 12);
+    addText(`Overall Security Score: ${results.score}/100`, 14, true);
 
-    // SSL Information
-    doc.setFontSize(16);
-    doc.text('SSL Certificate', 20, 75);
-    doc.setFontSize(10);
-    doc.text(`Status: ${results.ssl.valid ? 'Valid' : 'Invalid'}`, 25, 85);
-    doc.text(`Grade: ${results.ssl.grade}`, 25, 95);
-    doc.text(`Issuer: ${results.ssl.issuer}`, 25, 105);
+    // Grade explanation
+    let gradeDesc = '';
+    if (results.score >= 90) gradeDesc = 'Excellent security posture!';
+    else if (results.score >= 80) gradeDesc = 'Very good security implementation';
+    else if (results.score >= 70) gradeDesc = 'Good security with minor improvements needed';
+    else if (results.score >= 60) gradeDesc = 'Adequate security but needs attention';
+    else if (results.score >= 40) gradeDesc = 'Poor security - immediate attention needed';
+    else gradeDesc = 'Critical security issues detected!';
+    
+    addText(`Assessment: ${gradeDesc}`, 12);
+
+    // SSL Certificate Information
+    addSectionHeader('SSL/TLS Certificate Analysis');
+    addText(`Certificate Status: ${results.ssl.valid ? 'Valid' : 'Invalid'}`, 12, true);
+    addText(`SSL Grade: ${results.ssl.grade || 'N/A'}`, 12);
+    addText(`Issuer: ${results.ssl.issuer || 'Unknown'}`, 10);
+    addText(`Subject: ${results.ssl.subject || 'Unknown'}`, 10);
+    
+    if (results.ssl.validFrom) {
+        addText(`Valid From: ${new Date(results.ssl.validFrom).toLocaleDateString()}`, 10);
+    }
+    if (results.ssl.validTo) {
+        addText(`Valid To: ${new Date(results.ssl.validTo).toLocaleDateString()}`, 10);
+    }
+    
+    addText(`Key Length: ${results.ssl.keyLength || 'Unknown'} bits`, 10);
+    addText(`Protocol: ${results.ssl.protocol || 'Unknown'}`, 10);
+    addText(`Signature Algorithm: ${results.ssl.signatureAlgorithm || 'Unknown'}`, 10);
+
+    if (results.ssl.error) {
+        addText(`Error: ${results.ssl.error}`, 10);
+    }
+
+    // Detailed SSL Tests (if available)
+    if (results.detailedSsl && results.detailedSsl.tests) {
+        addSectionHeader('SSL Certificate Tests');
+        results.detailedSsl.tests.forEach(test => {
+            addText(`${test.name}: ${test.status.toUpperCase()}`, 11, true);
+            if (test.description) {
+                const wrappedDesc = doc.splitTextToSize(test.description, 170);
+                wrappedDesc.forEach(line => addText(line, 9));
+            }
+            if (test.recommendation) {
+                addText(`Recommendation: ${test.recommendation}`, 9);
+            }
+            yPos += 3; // Space between tests
+        });
+    }
 
     // Security Headers
-    doc.setFontSize(16);
-    doc.text('Security Headers', 20, 125);
-    doc.setFontSize(10);
-    let yPos = 135;
-    results.headers.forEach(header => {
-        doc.text(`${header.name}: ${header.present ? 'Present' : 'Missing'}`, 25, yPos);
-        yPos += 10;
-    });
+    addSectionHeader('Security Headers Analysis');
+    
+    if (results.headers && results.headers.length > 0) {
+        // Group headers by category if available
+        const categories = ['critical', 'important', 'modern', 'additional', 'legacy', 'deprecated', 'information'];
+        const categorizedHeaders = {};
+        
+        // Group headers
+        results.headers.forEach(header => {
+            const category = header.category || 'other';
+            if (!categorizedHeaders[category]) {
+                categorizedHeaders[category] = [];
+            }
+            categorizedHeaders[category].push(header);
+        });
+
+        // Display headers by category
+        categories.forEach(category => {
+            if (categorizedHeaders[category] && categorizedHeaders[category].length > 0) {
+                const categoryTitle = category.charAt(0).toUpperCase() + category.slice(1) + ' Headers';
+                addText(categoryTitle, 14, true);
+                
+                categorizedHeaders[category].forEach(header => {
+                    const status = header.present ? 'Present' : 'Missing';
+                    const statusColor = header.present ? '✓' : '✗';
+                    addText(`${statusColor} ${header.name}: ${status}`, 11);
+                    
+                    if (header.present && header.value) {
+                        const wrappedValue = doc.splitTextToSize(`Value: ${header.value}`, 160);
+                        wrappedValue.forEach(line => addText(`   ${line}`, 9));
+                    }
+                    
+                    if (header.description) {
+                        const wrappedDesc = doc.splitTextToSize(`   ${header.description}`, 160);
+                        wrappedDesc.forEach(line => addText(line, 9));
+                    }
+                    yPos += 2;
+                });
+                yPos += 5;
+            }
+        });
+
+        // Handle ungrouped headers
+        if (categorizedHeaders.other) {
+            addText('Other Headers', 14, true);
+            categorizedHeaders.other.forEach(header => {
+                const status = header.present ? 'Present' : 'Missing';
+                const statusColor = header.present ? '✓' : '✗';
+                addText(`${statusColor} ${header.name}: ${status}`, 11);
+                yPos += 2;
+            });
+        }
+    }
+
+    // Additional Security Checks
+    if (results.additional && results.additional.length > 0) {
+        addSectionHeader('Additional Security Checks');
+        
+        results.additional.forEach(check => {
+            let statusIcon = '';
+            switch (check.status) {
+                case 'pass': statusIcon = '✓'; break;
+                case 'fail': statusIcon = '✗'; break;
+                case 'warning': statusIcon = '⚠'; break;
+                default: statusIcon = 'ℹ';
+            }
+            
+            addText(`${statusIcon} ${check.name}: ${check.status.toUpperCase()}`, 11, true);
+            
+            if (check.description) {
+                const wrappedDesc = doc.splitTextToSize(`   ${check.description}`, 160);
+                wrappedDesc.forEach(line => addText(line, 9));
+            }
+            
+            if (check.details) {
+                const wrappedDetails = doc.splitTextToSize(`   Details: ${check.details}`, 160);
+                wrappedDetails.forEach(line => addText(line, 9));
+            }
+            yPos += 3;
+        });
+    }
+
+    // Certificate Chain (if available)
+    if (results.detailedSsl && results.detailedSsl.certificateDetails && results.detailedSsl.certificateDetails.chain) {
+        addSectionHeader('Certificate Chain');
+        
+        results.detailedSsl.certificateDetails.chain.forEach((cert, index) => {
+            addText(`Certificate ${index + 1}: ${cert.type || 'Unknown Type'}`, 12, true);
+            addText(`   Subject: ${cert.subject || 'Unknown'}`, 10);
+            addText(`   Issuer: ${cert.issuer || 'Unknown'}`, 10);
+            addText(`   Valid: ${cert.validity?.status || 'Unknown'}`, 10);
+            if (cert.validFrom && cert.validTo) {
+                addText(`   Validity Period: ${cert.validFrom} to ${cert.validTo}`, 10);
+            }
+            yPos += 3;
+        });
+    }
+
+    // Footer
+    checkNewPage(30);
+    yPos = pageHeight - 30;
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'normal');
+    doc.text('Generated by Security Headers Checker', margin, yPos);
+    doc.text(`Report generated on ${new Date().toLocaleString()}`, margin, yPos + 10);
 
     doc.save(`${filename}.pdf`);
 }
@@ -1130,29 +1306,180 @@ function exportToExcel(results, filename) {
 
     // Summary sheet
     const summaryData = [
+        ['Security Headers Analysis Report'],
+        [''],
         ['URL', results.url],
+        ['Domain', results.domain || 'N/A'],
         ['Generated', new Date(results.timestamp).toLocaleString()],
-        ['Security Score', `${results.score}/100`],
-        ['SSL Valid', results.ssl.valid ? 'Yes' : 'No'],
-        ['SSL Grade', results.ssl.grade]
+        ['Overall Security Score', `${results.score}/100`],
+        [''],
+        ['SSL Certificate Status', results.ssl.valid ? 'Valid' : 'Invalid'],
+        ['SSL Grade', results.ssl.grade || 'N/A'],
+        ['SSL Issuer', results.ssl.issuer || 'Unknown'],
+        ['SSL Subject', results.ssl.subject || 'Unknown'],
+        ['SSL Valid From', results.ssl.validFrom ? new Date(results.ssl.validFrom).toLocaleDateString() : 'N/A'],
+        ['SSL Valid To', results.ssl.validTo ? new Date(results.ssl.validTo).toLocaleDateString() : 'N/A'],
+        ['SSL Key Length', results.ssl.keyLength ? `${results.ssl.keyLength} bits` : 'Unknown'],
+        ['SSL Protocol', results.ssl.protocol || 'Unknown'],
+        ['SSL Signature Algorithm', results.ssl.signatureAlgorithm || 'Unknown']
     ];
+
+    if (results.ssl.error) {
+        summaryData.push(['SSL Error', results.ssl.error]);
+    }
+
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    
+    // Style the summary sheet
+    summarySheet['A1'] = { v: 'Security Headers Analysis Report', t: 's', s: { font: { bold: true, sz: 16 } } };
+    
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
 
-    // Headers sheet
+    // SSL Tests sheet (if detailed SSL data available)
+    if (results.detailedSsl && results.detailedSsl.tests) {
+        const sslTestsData = [
+            ['SSL Certificate Tests'],
+            [''],
+            ['Test Name', 'Status', 'Score', 'Max Score', 'Description', 'Recommendation']
+        ];
+
+        results.detailedSsl.tests.forEach(test => {
+            sslTestsData.push([
+                test.name || 'Unknown Test',
+                test.status || 'Unknown',
+                test.score || 0,
+                test.maxScore || 0,
+                test.description || '',
+                test.recommendation || ''
+            ]);
+        });
+
+        const sslTestsSheet = XLSX.utils.aoa_to_sheet(sslTestsData);
+        sslTestsSheet['A1'] = { v: 'SSL Certificate Tests', t: 's', s: { font: { bold: true, sz: 14 } } };
+        
+        XLSX.utils.book_append_sheet(workbook, sslTestsSheet, 'SSL Tests');
+    }
+
+    // Security Headers sheet
     const headersData = [
-        ['Header Name', 'Present', 'Value', 'Description']
+        ['Security Headers Analysis'],
+        [''],
+        ['Header Name', 'Category', 'Present', 'Status', 'Current Value', 'Description', 'Recommendation', 'Example Value']
     ];
-    results.headers.forEach(header => {
-        headersData.push([
-            header.name,
-            header.present ? 'Yes' : 'No',
-            header.present ? header.value : '',
-            header.description
-        ]);
-    });
+
+    if (results.headers && results.headers.length > 0) {
+        results.headers.forEach(header => {
+            let status = 'Missing';
+            if (header.present) {
+                status = header.category === 'information' ? 'Disclosed' : 'Present';
+            } else {
+                status = header.category === 'information' ? 'Hidden (Good)' : 'Missing';
+            }
+
+            headersData.push([
+                header.name || 'Unknown Header',
+                header.category || 'Unknown',
+                header.present ? 'Yes' : 'No',
+                status,
+                header.present ? (header.value || '') : '',
+                header.description || '',
+                header.recommendation || '',
+                header.example || ''
+            ]);
+        });
+    }
+
     const headersSheet = XLSX.utils.aoa_to_sheet(headersData);
-    XLSX.utils.book_append_sheet(workbook, headersSheet, 'Headers');
+    headersSheet['A1'] = { v: 'Security Headers Analysis', t: 's', s: { font: { bold: true, sz: 14 } } };
+    
+    XLSX.utils.book_append_sheet(workbook, headersSheet, 'Security Headers');
+
+    // Additional Security Checks sheet
+    if (results.additional && results.additional.length > 0) {
+        const additionalData = [
+            ['Additional Security Checks'],
+            [''],
+            ['Check Name', 'Status', 'Description', 'Details', 'Recommendation']
+        ];
+
+        results.additional.forEach(check => {
+            additionalData.push([
+                check.name || 'Unknown Check',
+                check.status ? check.status.toUpperCase() : 'Unknown',
+                check.description || '',
+                check.details || '',
+                check.recommendation || ''
+            ]);
+        });
+
+        const additionalSheet = XLSX.utils.aoa_to_sheet(additionalData);
+        additionalSheet['A1'] = { v: 'Additional Security Checks', t: 's', s: { font: { bold: true, sz: 14 } } };
+        
+        XLSX.utils.book_append_sheet(workbook, additionalSheet, 'Additional Checks');
+    }
+
+    // Certificate Chain sheet (if available)
+    if (results.detailedSsl && results.detailedSsl.certificateDetails && results.detailedSsl.certificateDetails.chain) {
+        const chainData = [
+            ['Certificate Chain'],
+            [''],
+            ['Position', 'Certificate Type', 'Subject', 'Issuer', 'Serial Number', 'Valid From', 'Valid To', 'Key Algorithm', 'Key Length', 'Signature Algorithm', 'Validity Status', 'Fingerprint SHA-256']
+        ];
+
+        results.detailedSsl.certificateDetails.chain.forEach((cert, index) => {
+            chainData.push([
+                index + 1,
+                cert.type || 'Unknown',
+                cert.subject || 'Unknown',
+                cert.issuer || 'Unknown',
+                cert.serialNumber || 'Unknown',
+                cert.validFrom || 'Unknown',
+                cert.validTo || 'Unknown',
+                cert.keyAlgorithm || 'Unknown',
+                cert.keyLength ? `${cert.keyLength} bits` : 'Unknown',
+                cert.signatureAlgorithm || 'Unknown',
+                cert.validity?.status || 'Unknown',
+                cert.fingerprint256 || 'Unknown'
+            ]);
+        });
+
+        const chainSheet = XLSX.utils.aoa_to_sheet(chainData);
+        chainSheet['A1'] = { v: 'Certificate Chain', t: 's', s: { font: { bold: true, sz: 14 } } };
+        
+        XLSX.utils.book_append_sheet(workbook, chainSheet, 'Certificate Chain');
+    }
+
+    // Raw Data sheet (for technical analysis)
+    const rawDataSheet = XLSX.utils.json_to_sheet([results]);
+    XLSX.utils.book_append_sheet(workbook, rawDataSheet, 'Raw Data');
+
+    // Set column widths for better readability
+    const worksheets = ['Summary', 'Security Headers', 'Additional Checks'];
+    worksheets.forEach(sheetName => {
+        if (workbook.Sheets[sheetName]) {
+            const ws = workbook.Sheets[sheetName];
+            const cols = [
+                { wch: 25 }, // Column A
+                { wch: 15 }, // Column B
+                { wch: 10 }, // Column C
+                { wch: 15 }, // Column D
+                { wch: 30 }, // Column E
+                { wch: 40 }, // Column F
+                { wch: 40 }, // Column G
+                { wch: 30 }  // Column H
+            ];
+            ws['!cols'] = cols;
+        }
+    });
+
+    // Add metadata
+    workbook.Props = {
+        Title: 'Security Headers Analysis Report',
+        Subject: `Security analysis for ${results.url}`,
+        Author: 'Security Headers Checker',
+        CreatedDate: new Date(),
+        ModifiedDate: new Date()
+    };
 
     XLSX.writeFile(workbook, `${filename}.xlsx`);
 }
