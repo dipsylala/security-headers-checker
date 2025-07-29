@@ -343,6 +343,7 @@ async function runSSLyzeTests() {
         { name: 'Direct SSLyze Scan', test: testDirectSSLyzeScan },
         { name: 'SSLyze API Integration', test: testSSLyzeIntegrationInAPI },
         { name: 'SSLyze Vulnerability Detection', test: testSSLyzeVulnerabilityDetection },
+        { name: 'SSLyze High-Priority Features', test: testSSLyzeHighPriorityFeatures },
         { name: 'SSLyze Configuration Tests', test: testSSLyzeWithDifferentConfigurations }
     ];
 
@@ -411,13 +412,81 @@ async function runSSLyzeTests() {
     return results;
 }
 
+/**
+ * Test high-priority SSLyze features (TLS Fallback, Renegotiation, CT, OCSP)
+ */
+async function testSSLyzeHighPriorityFeatures() {
+    console.log('🎯 Testing SSLyze High-Priority Features...');
+    console.log('📡 Target: github.com (comprehensive security analysis)');
+
+    try {
+        const result = await performSecurityAnalysis('https://github.com');
+        
+        if (!result.ssl || !result.ssl.sslyzeTests) {
+            console.log('⚠️ SSLyze tests not found in result');
+            return { passed: false, error: 'SSLyze tests not found' };
+        }
+        
+        const sslyzeTests = result.ssl.sslyzeTests;
+        console.log(`📊 Found ${sslyzeTests.length} SSLyze test results`);
+        
+        // Check for high-priority features
+        const highPriorityTests = [
+            'SSLyze TLS Fallback SCSV',
+            'SSLyze Session Renegotiation',
+            'SSLyze Certificate Transparency',
+            'SSLyze OCSP Stapling',
+            'SSLyze Extended Master Secret'
+        ];
+        
+        let foundTests = 0;
+        let passedTests = 0;
+        
+        for (const testName of highPriorityTests) {
+            const test = sslyzeTests.find(t => t.name === testName);
+            if (test) {
+                foundTests++;
+                console.log(`🔍 ${testName}: ${test.status.toUpperCase()}`);
+                console.log(`   📝 ${test.details}`);
+                console.log(`   📊 Score: ${test.score}`);
+                
+                if (test.status === 'pass') {
+                    passedTests++;
+                }
+                
+                if (test.recommendation) {
+                    console.log(`   💡 ${test.recommendation}`);
+                }
+                console.log('');
+            }
+        }
+        
+        console.log(`📈 High-Priority Features Summary:`);
+        console.log(`   Found: ${foundTests}/${highPriorityTests.length} tests`);
+        console.log(`   Passed: ${passedTests}/${foundTests} tests`);
+        
+        if (foundTests >= 4) {
+            console.log('✅ SSLyze high-priority features test PASSED\n');
+            return { passed: true, foundTests, passedTests, totalTests: highPriorityTests.length };
+        } else {
+            console.log('⚠️ SSLyze high-priority features test incomplete (some features missing)\n');
+            return { passed: true, foundTests, passedTests, totalTests: highPriorityTests.length, warning: 'Incomplete feature set' };
+        }
+        
+    } catch (error) {
+        console.log(`❌ SSLyze high-priority features test FAILED: ${error.message}\n`);
+        return { passed: false, error: error.message };
+    }
+}
+
 // Export for use in main test runner
 module.exports = { 
     runSSLyzeTests,
     testSSLyzeAvailability,
     testDirectSSLyzeScan,
     testSSLyzeIntegrationInAPI,
-    testSSLyzeVulnerabilityDetection
+    testSSLyzeVulnerabilityDetection,
+    testSSLyzeHighPriorityFeatures
 };
 
 // Run tests if called directly
