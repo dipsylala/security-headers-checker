@@ -379,7 +379,7 @@ class SecurityChecker {
         const presentOther = otherHeaders.filter(h => h.present).length;
         score += (presentOther / otherHeaders.length) * 10;
 
-        // Additional checks (20 points)
+        // Web security checks (20 points)
         maxScore += 20;
         const passedChecks = results.additional.filter(check => check.status === 'pass').length;
         const totalChecks = results.additional.filter(check => check.status !== 'info').length;
@@ -404,6 +404,12 @@ class SecurityChecker {
 
         // Update overall score
         this.updateOverallScore(results.score);
+        
+        // Debug: Ensure grade boundaries are added after a short delay for DOM stability
+        setTimeout(() => {
+            this.addGradeBoundaries();
+            console.log('Grade boundaries function called - check if DOM element exists');
+        }, 100);
 
         // Display SSL results
         this.displaySSLResults(results.ssl, results.detailedSsl);
@@ -411,7 +417,7 @@ class SecurityChecker {
         // Display headers results
         this.displayHeadersResults(results.headers);
 
-        // Display additional checks
+        // Display web security checks
         this.displayAdditionalResults(results.additional);
 
         // Scroll to results
@@ -475,12 +481,16 @@ class SecurityChecker {
 
         document.getElementById('scoreDescription').textContent = description;
 
-        // Add grade boundaries visualization
-        this.addGradeBoundaries();
+        // Grade boundaries will be added from displayResults after DOM is stable
     }
 
     addGradeBoundaries() {
-        const progressContainer = document.querySelector('.progress');
+        const progressContainer = document.getElementById('scoreProgress');
+        
+        if (!progressContainer) {
+            console.error('Score progress container not found for grade boundaries');
+            return;
+        }
 
         // Remove existing boundaries if any
         const existingBoundaries = progressContainer.parentElement.querySelector('.grade-boundaries');
@@ -524,8 +534,17 @@ class SecurityChecker {
 
         boundariesContainer.appendChild(boundaries);
 
-        // Insert boundaries directly after the progress bar
-        progressContainer.parentElement.insertBefore(boundariesContainer, progressContainer.nextSibling);
+        // Insert boundaries after the progress bar more safely
+        const parentElement = progressContainer.parentElement;
+        const nextElement = progressContainer.nextSibling;
+        
+        if (nextElement) {
+            parentElement.insertBefore(boundariesContainer, nextElement);
+        } else {
+            parentElement.appendChild(boundariesContainer);
+        }
+        
+        console.log('Grade boundaries added successfully - element created with class:', boundariesContainer.className);
     }
 
     displaySSLResults(ssl, detailedSsl) {
@@ -679,14 +698,18 @@ class SecurityChecker {
         // Build recommendations section
         let recommendationsSection = '';
         if (ssl.recommendations && ssl.recommendations.length > 0) {
-            const recommendationsList = ssl.recommendations.map(rec => `<li>${rec}</li>`).join('');
+            const recommendationsList = ssl.recommendations.map(rec => `<li class="fw-bold text-warning">${rec}</li>`).join('');
             recommendationsSection = `
-                <div class="mt-3 p-3 bg-light rounded">
-                    <h6 class="mb-2">
+                <div class="mt-3 p-3 border border-warning rounded" style="background-color: #fff3cd;">
+                    <h6 class="mb-2 text-warning">
                         <i class="fas fa-lightbulb me-2"></i>
-                        Recommendations
+                        💡 How to Improve Your SSL Score
                     </h6>
-                    <ul class="mb-0 text-muted">
+                    <div class="small text-muted mb-2">
+                        <strong>Current Score:</strong> ${ssl.score}/100 
+                        ${ssl.score < 100 ? `<span class="text-warning">(${100 - ssl.score} points from perfect)</span>` : '<span class="text-success">(Perfect!)</span>'}
+                    </div>
+                    <ul class="mb-0">
                         ${recommendationsList}
                     </ul>
                 </div>
@@ -1377,9 +1400,9 @@ function exportToPDF(results, filename) {
         }
     }
 
-    // Additional Security Checks
+    // Web Security Checks
     if (results.additional && results.additional.length > 0) {
-        addSectionHeader('Additional Security Checks');
+        addSectionHeader('Web Security Checks');
         
         results.additional.forEach(check => {
             let statusIcon = '';
@@ -1525,10 +1548,10 @@ function exportToExcel(results, filename) {
     
     XLSX.utils.book_append_sheet(workbook, headersSheet, 'Security Headers');
 
-    // Additional Security Checks sheet
+    // Web Security Checks sheet
     if (results.additional && results.additional.length > 0) {
         const additionalData = [
-            ['Additional Security Checks'],
+            ['Web Security Checks'],
             [''],
             ['Check Name', 'Status', 'Description', 'Details', 'Recommendation']
         ];
@@ -1544,9 +1567,9 @@ function exportToExcel(results, filename) {
         });
 
         const additionalSheet = XLSX.utils.aoa_to_sheet(additionalData);
-        additionalSheet['A1'] = { v: 'Additional Security Checks', t: 's', s: { font: { bold: true, sz: 14 } } };
+        additionalSheet['A1'] = { v: 'Web Security Checks', t: 's', s: { font: { bold: true, sz: 14 } } };
         
-        XLSX.utils.book_append_sheet(workbook, additionalSheet, 'Additional Checks');
+        XLSX.utils.book_append_sheet(workbook, additionalSheet, 'Web Security');
     }
 
     // Certificate Chain sheet (if available)
@@ -1585,7 +1608,7 @@ function exportToExcel(results, filename) {
     XLSX.utils.book_append_sheet(workbook, rawDataSheet, 'Raw Data');
 
     // Set column widths for better readability
-    const worksheets = ['Summary', 'Security Headers', 'Additional Checks'];
+    const worksheets = ['Summary', 'Security Headers', 'Web Security'];
     worksheets.forEach(sheetName => {
         if (workbook.Sheets[sheetName]) {
             const ws = workbook.Sheets[sheetName];

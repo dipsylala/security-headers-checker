@@ -1,6 +1,6 @@
 const assert = require('assert');
 const http = require('http');
-const { checkSSLyzeAvailability, runSSLyzeScan, convertSSLyzeToTests } = require('../../lib/ssl-analyzer');
+const { checkSSLyzeAvailability, runSSLyzeScan, convertSSLyzeToTests } = require('../../lib/ssl-analyzer/sslyze-integration');
 
 /**
  * SSLyze Integration Tests

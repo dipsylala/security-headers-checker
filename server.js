@@ -10,9 +10,9 @@ const path = require('path');
 
 // Import custom modules
 const { validateUrl, getUrlSecurityAssessment } = require('./lib/url-utils');
-const { checkSSLCertificate, analyzeSSLCertificateDetailed } = require('./lib/ssl-analyzer');
-const { checkSecurityHeaders } = require('./lib/headers-checker');
-const { performAdditionalChecks } = require('./lib/additional-checks');
+const sslAnalyzer = require('./lib/ssl-analyzer/index.js');
+const securityHeaders = require('./lib/security-headers/index.js');
+const webSecurity = require('./lib/web-security/index.js');
 const { generateSecurityAssessment } = require('./lib/scoring-system');
 const { checkReachabilityWithRetry, getReachabilitySuggestions } = require('./lib/reachability-checker');
 
@@ -41,9 +41,8 @@ app.get('/api/health', (req, res) => {
         modules: {
             'url-utils': 'loaded',
             'ssl-analyzer': 'loaded',
-            'enhanced-ssl-analyzer': 'loaded',
-            'headers-checker': 'loaded',
-            'additional-checks': 'loaded',
+            'security-headers': 'loaded',
+            'web-security': 'loaded',
             'scoring-system': 'loaded'
         }
     });
@@ -108,16 +107,15 @@ app.post('/api/analyze', async (req, res) => {
         // Step 3: Perform parallel security checks
         console.log(`[${new Date().toISOString()}] Performing security checks...`);
 
-        // Extract hostname for detailed SSL analysis
+        // Extract hostname for analysis
         const urlObj = new URL(validatedUrl);
         const hostname = urlObj.hostname;
         const port = urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80);
 
-        const [sslResult, detailedSslResult, headersResult, additionalResult] = await Promise.allSettled([
-            checkSSLCertificate(validatedUrl),
-            urlObj.protocol === 'https:' ? analyzeSSLCertificateDetailed(hostname, port) : Promise.resolve(null),
-            checkSecurityHeaders(validatedUrl),
-            performAdditionalChecks(validatedUrl)
+        const [sslResult, headersResult, additionalResult] = await Promise.allSettled([
+            sslAnalyzer.performSSLAnalysis(validatedUrl, { debug: false }), // Orchestrated SSL analysis
+            securityHeaders.checkSecurityHeaders(validatedUrl),
+            webSecurity.performWebSecurityChecks(validatedUrl)
         ]);
 
         // Process results and handle any failures
@@ -129,12 +127,48 @@ app.post('/api/analyze', async (req, res) => {
                 responseTime: reachabilityResult.responseTime,
                 attempts: reachabilityResult.totalAttempts
             },
-            ssl: sslResult.status === 'fulfilled' ? sslResult.value : {
-                error: sslResult.reason?.message || 'SSL check failed',
+            ssl: sslResult.status === 'fulfilled' ? {
+                // SSL certificate and security info
+                ...sslResult.value.basic,
+                // Use comprehensive score if available, otherwise fall back to certificate score
+                score: sslResult.value.score?.total || sslResult.value.basic?.score || 0,
+                maxScore: sslResult.value.score?.maxScore || 100,
+                grade: sslResult.value.score?.grade || sslResult.value.basic?.grade || 'F',
+                // Ensure recommendations are prominently included
+                recommendations: sslResult.value.basic?.recommendations || []
+            } : {
+                error: sslResult.reason?.message || 'SSL analysis failed',
                 grade: 'F',
-                score: 0
+                score: 0,
+                maxScore: 100
             },
-            detailedSsl: detailedSslResult.status === 'fulfilled' ? detailedSslResult.value : null,
+            detailedSsl: sslResult.status === 'fulfilled' ? {
+                // Structure expected by frontend
+                certificateDetails: {
+                    issuer: sslResult.value.basic?.issuer || 'Unknown',
+                    subject: sslResult.value.basic?.subject || 'Unknown',
+                    serialNumber: sslResult.value.basic?.serialNumber || 'Unknown',
+                    keyAlgorithm: sslResult.value.basic?.keyAlgorithm || 'Unknown',
+                    validFrom: sslResult.value.basic?.validFrom || 'Unknown',
+                    validTo: sslResult.value.basic?.validTo || 'Unknown',
+                    keyLength: sslResult.value.basic?.keyLength || 0,
+                    protocol: sslResult.value.basic?.protocol || 'Unknown',
+                    fingerprint: sslResult.value.basic?.fingerprint || 'Unknown',
+                    chain: sslResult.value.basic?.certificateChain || []
+                },
+                tests: sslResult.value.tests || [],
+                summary: {
+                    grade: sslResult.value.score?.grade || 'F',
+                    score: sslResult.value.score?.total || 0,
+                    maxScore: sslResult.value.score?.maxScore || 100,
+                    testsPassed: sslResult.value.tests ? sslResult.value.tests.filter(t => t.status === 'pass').length : 0,
+                    testsTotal: sslResult.value.tests ? sslResult.value.tests.length : 0,
+                    explanation: sslResult.value.summary?.message || 'SSL analysis completed'
+                },
+                combinedResults: sslResult.value.combined,
+                sslyzeResults: sslResult.value.sslyze,
+                analysisTime: sslResult.value.duration
+            } : null,
             headers: headersResult.status === 'fulfilled' ? headersResult.value : {
                 error: headersResult.reason?.message || 'Headers check failed',
                 headers: [],

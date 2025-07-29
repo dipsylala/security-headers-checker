@@ -147,6 +147,9 @@ body {
     margin-left: 25px;
     margin-right: 25px;
     position: relative;
+    /* Debug styling to ensure visibility */
+    min-height: 50px;
+    border-radius: 4px;
 }
 
 .grade-scale {
@@ -192,7 +195,7 @@ body {
 }
 
 /* Progress bar container padding */
-.progress {
+#scoreProgress {
     margin-left: 25px;
     margin-right: 25px;
 }
