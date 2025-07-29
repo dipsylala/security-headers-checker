@@ -10,6 +10,7 @@ const { runHeadersTests } = require('./security-headers.test.js');
 const { runAdditionalChecksTests } = require('./additional-checks.test.js');
 const { runBadSSLTests } = require('./badssl-scenarios.test.js');
 const { runComprehensiveSSLTests } = require('./comprehensive-ssl.test.js');
+const { runSSLyzeTests } = require('./sslyze-analysis.test.js');
 const http = require('http');
 
 /**
@@ -148,6 +149,12 @@ async function runAllIntegrationTests() {
         console.log('-'.repeat(40));
         const badSSLResults = await runBadSSLTests();
         allResults.push({ phase: 'BadSSL Scenarios', results: badSSLResults });
+        
+        // Test 6: SSLyze Enhanced Analysis Tests
+        console.log('\n📋 Phase 6: SSLyze Enhanced SSL Analysis Tests');
+        console.log('-'.repeat(40));
+        const sslyzeResults = await runSSLyzeTests();
+        allResults.push({ phase: 'SSLyze Analysis', results: sslyzeResults });
         
     } catch (error) {
         console.error(`\n💥 Test phase failed: ${error.message}`);

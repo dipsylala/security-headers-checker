@@ -16,6 +16,7 @@
     "test:all": "node test/integration/run-all-tests.js",
     "test:ssl": "node test/integration/ssl-certificate.test.js",
     "test:enhanced-ssl": "node test/integration/comprehensive-ssl.test.js",
+    "test:sslyze": "node test/integration/sslyze-analysis.test.js",
     "test:headers": "node test/integration/security-headers.test.js",
     "test:additional": "node test/integration/additional-checks.test.js",
     "test:badssl": "node test/integration/badssl-scenarios.test.js",
