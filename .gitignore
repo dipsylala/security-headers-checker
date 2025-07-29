@@ -113,3 +113,6 @@ Desktop.ini
 # Logs
 logs
 *.log
+
+# Jetbrains
+.idea/
