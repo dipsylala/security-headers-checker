@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security Headers Checker</title>
+    <title>WebCheck Validator</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="css/style.css" rel="stylesheet">
@@ -13,7 +13,7 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
                 <i class="fas fa-shield-alt me-2"></i>
-                Security Headers Checker
+                WebCheck Validator
             </a>
         </div>
     </nav>
@@ -90,7 +90,7 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="progress mb-1">
+                        <div class="progress mb-1" id="scoreProgress">
                             <div class="progress-bar" id="scoreProgressBar" role="progressbar" style="width: 0%"></div>
                         </div>
                         <!-- Grade boundaries will be inserted here by JavaScript -->
@@ -186,7 +186,7 @@
     <!-- Footer -->
     <footer class="bg-dark text-white text-center py-3 mt-5">
         <div class="container-fluid">
-            <p class="mb-0">&copy; 2025 Security Headers Checker. All rights reserved.</p>
+            <p class="mb-0">&copy; 2025 WebCheck Validator. All rights reserved.</p>
         </div>
     </footer>
 

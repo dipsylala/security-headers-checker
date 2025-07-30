@@ -2,7 +2,7 @@ const assert = require('assert');
 const http = require('http');
 
 /**
- * Comprehensive Integration Tests for Security Headers Checker
+ * Comprehensive Integration Tests for WebCheck Validator
  * Tests real-world scenarios with actual websites
  */
 

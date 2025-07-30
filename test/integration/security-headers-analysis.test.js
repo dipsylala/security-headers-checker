@@ -22,7 +22,8 @@ function performSecurityAnalysis(url) {
             headers: {
                 'Content-Type': 'application/json',
                 'Content-Length': Buffer.byteLength(postData)
-            }
+            },
+            timeout: 30000 // 30 second timeout for analysis
         };
 
         const req = http.request(options, (res) => {
@@ -48,6 +49,11 @@ function performSecurityAnalysis(url) {
 
         req.on('error', (error) => {
             reject(error);
+        });
+
+        req.on('timeout', () => {
+            req.destroy();
+            reject(new Error('Request timeout - analysis took longer than 30 seconds'));
         });
 
         req.write(postData);

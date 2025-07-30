@@ -27,7 +27,7 @@ const EXCLUDE_PATTERNS = [
 ];
 
 async function build() {
-    console.log('🏗️  Building Security Headers Checker...\n');
+    console.log('🏗️  Building WebCheck Validator...\n');
 
     try {
         // Clean build directory
@@ -108,7 +108,7 @@ async function build() {
 
         // Create start.bat for Windows
         const startBat = `@echo off
-echo Starting Security Headers Checker...
+echo Starting WebCheck Validator...
 echo.
 echo The application will be available at: http://localhost:3000
 echo Press Ctrl+C to stop the server
@@ -119,7 +119,7 @@ node server.js
 
         // Create start.sh for Linux/Mac
         const startSh = `#!/bin/bash
-echo "Starting Security Headers Checker..."
+echo "Starting WebCheck Validator..."
 echo ""
 echo "The application will be available at: http://localhost:3000"
 echo "Press Ctrl+C to stop the server"
@@ -140,9 +140,9 @@ node server.js
 
         // Create deployment README
         console.log('📖 Creating deployment README...');
-        const deploymentReadme = `# Security Headers Checker - Production Build
+        const deploymentReadme = `# WebCheck Validator - Production Build
 
-This is a production-ready build of the Security Headers Checker application.
+This is a production-ready build of the WebCheck Validator application.
 
 ## Quick Start
 

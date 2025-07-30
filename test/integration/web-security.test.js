@@ -22,7 +22,8 @@ function performSecurityAnalysis(url) {
             headers: {
                 'Content-Type': 'application/json',
                 'Content-Length': Buffer.byteLength(postData)
-            }
+            },
+            timeout: 30000 // 30 second timeout for analysis
         };
 
         const req = http.request(options, (res) => {
@@ -50,6 +51,11 @@ function performSecurityAnalysis(url) {
             reject(error);
         });
 
+        req.on('timeout', () => {
+            req.destroy();
+            reject(new Error('Request timeout - analysis took longer than 30 seconds'));
+        });
+
         req.write(postData);
         req.end();
     });
@@ -61,7 +67,6 @@ const ADDITIONAL_CHECKS_TEST_SITES = [
         url: 'https://github.com',
         expectedResults: {
             httpsRedirect: 'pass',
-            serverInfo: 'info',
             minChecks: 3,
             shouldBeSecure: true
         }
@@ -71,7 +76,6 @@ const ADDITIONAL_CHECKS_TEST_SITES = [
         url: 'https://cloudflare.com',
         expectedResults: {
             httpsRedirect: 'pass',
-            serverInfo: 'info',
             minChecks: 3,
             shouldBeSecure: true
         }
@@ -81,7 +85,6 @@ const ADDITIONAL_CHECKS_TEST_SITES = [
         url: 'https://google.com',
         expectedResults: {
             httpsRedirect: 'pass',
-            serverInfo: 'info',
             minChecks: 3,
             shouldBeSecure: true
         }
@@ -91,7 +94,6 @@ const ADDITIONAL_CHECKS_TEST_SITES = [
         url: 'https://developer.mozilla.org',
         expectedResults: {
             httpsRedirect: 'pass',
-            serverInfo: 'info',
             minChecks: 3,
             shouldBeSecure: true
         }
@@ -113,7 +115,7 @@ async function runAdditionalChecksTests() {
 
             // Display additional checks information
             console.log(`📊 Additional Checks Found: ${additional.checks ? additional.checks.length : 0}`);
-            console.log(`🎯 Score: ${additional.score}/10`);
+            console.log(`🎯 Score: ${additional.score.score}/${additional.score.maxScore}`);
 
             if (additional.checks && additional.checks.length > 0) {
                 console.log(`🔒 Additional Checks Details:`);

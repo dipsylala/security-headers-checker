@@ -1,6 +1,6 @@
 # Integration Tests
 
-This directory contains comprehensive integration tests for the Security Headers Checker, organized by functional area for better maintainability and focused testing.
+This directory contains comprehensive integration tests for the WebCheck Validator, organized by functional area for better maintainability and focused testing.
 
 ## Test Structure
 
