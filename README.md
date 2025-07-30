@@ -1,4 +1,4 @@
-# Security Headers Checker
+# WebCheck Validator
 
 A comprehensive web application built with Bootstrap and Node.js that analyzes website security headers, SSL certificates, and performs various security checks.
 
@@ -9,7 +9,7 @@ A comprehensive web application built with Bootstrap and Node.js that analyzes w
 1. Open the project in VS Code
 2. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
 3. Type "Tasks: Run Task" and select it
-4. Choose "Start Security Headers Checker"
+4. Choose "Start WebCheck Validator"
 5. The application will be available at http://localhost:3000
 
 ### Option 2: Using Build Scripts

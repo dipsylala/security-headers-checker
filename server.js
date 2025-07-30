@@ -1,5 +1,5 @@
 /**
- * Security Headers Checker - Main Server
+ * WebCheck Validator - Main Server
  * Modular Express.js application for comprehensive security analysis
  */
 
@@ -249,7 +249,7 @@ app.post('/api/analyze', async (req, res) => {
 // API documentation endpoint
 app.get('/api-docs', (req, res) => {
     res.json({
-        title: 'Security Headers Checker API',
+        title: 'WebCheck Validator API',
         version: '1.0.0',
         description: 'Comprehensive security analysis for web applications',
         endpoints: {
@@ -329,7 +329,7 @@ app.use((err, req, res, _next) => {
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 Security Headers Checker running on http://localhost:${PORT}`);
+    console.log(`🚀 WebCheck Validator running on http://localhost:${PORT}`);
     console.log(`📊 API documentation available at http://localhost:${PORT}/api-docs`);
     console.log(`🏥 Health check available at http://localhost:${PORT}/api/health`);
     console.log(`📁 Serving static files from current directory`);

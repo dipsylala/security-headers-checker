@@ -29,7 +29,7 @@
 			"dependsOn": "Install Dependencies"
 		},
 		{
-			"label": "Start Security Headers Checker",
+			"label": "Start WebCheck Validator",
 			"type": "shell",
 			"command": "npm start",
 			"group": {

@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 
-Write-Host "Setting up Security Headers Checker..." -ForegroundColor Green
+Write-Host "Setting up WebCheck Validator..." -ForegroundColor Green
 Write-Host ""
 
 Write-Host "Installing dependencies..." -ForegroundColor Yellow
@@ -19,7 +19,7 @@ catch {
 Write-Host ""
 Write-Host "Dependencies installed successfully!" -ForegroundColor Green
 Write-Host ""
-Write-Host "Starting Security Headers Checker..." -ForegroundColor Yellow
+Write-Host "Starting WebCheck Validator..." -ForegroundColor Yellow
 Write-Host "The application will be available at http://localhost:3000" -ForegroundColor Cyan
 Write-Host ""
 

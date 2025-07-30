@@ -1,8 +1,8 @@
-# Security Headers Checker - Test Suite
+# WebCheck Validator - Test Suite
 
 ## Overview
 
-Comprehensive integration test suite for the Security Headers Checker with robust server health checks and extensive security analysis coverage.
+Comprehensive integration test suite for the WebCheck Validator with robust server health checks and extensive security analysis coverage.
 
 ## Test Structure
 
@@ -136,7 +136,7 @@ npm run test:badssl
 
 ## Server Requirements
 
-**Required**: Security Headers Checker server must be running on `localhost:3000`
+**Required**: WebCheck Validator server must be running on `localhost:3000`
 
 ```bash
 # Start the server

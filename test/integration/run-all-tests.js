@@ -14,7 +14,7 @@ const { runSSLyzeTests } = require('./sslyze-analysis.test.js');
 const http = require('http');
 
 /**
- * Check if the Security Headers Checker server is running
+ * Check if the WebCheck Validator server is running
  * @returns {Promise<boolean>} True if server is running and responding
  */
 function checkServerHealth() {
