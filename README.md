@@ -1,6 +1,39 @@
 # WebCheck Validator
 
-A comprehensive web application built with Bootstrap and Node.js that analyzes website security headers, SSL certificates, and performs various security checks.
+A comprehensive web security analysis tool built with Bootstrap and Node.js that performs in-depth security assessments including SSL/TLS certificate analysis, security headers evaluation, and additional security protocol checks.
+
+## 🔍 **Comprehensive Security Analysis**
+
+WebCheck Validator performs **12 SSL certificate tests**, **22+ security header checks**, and **5 additional security protocol assessments** to provide a complete security posture evaluation.
+
+### 🔒 **SSL/TLS Certificate Analysis (12 Comprehensive Tests)**
+- **Certificate Validity** - Basic certificate validation and trust verification
+- **Certificate Expiration** - Validity period analysis with early warning alerts
+- **Hostname Verification** - Subject Alternative Name (SAN) validation
+- **Key Strength Analysis** - RSA/ECDSA key size evaluation (2048-bit minimum recommended)
+- **Signature Algorithm Assessment** - Cryptographic algorithm security analysis
+- **Certificate Chain Verification** - Complete chain of trust validation
+- **Certificate Revocation Status** - OCSP/CRL checking awareness
+- **Certificate Pinning Detection** - HPKP header analysis
+- **Perfect Forward Secrecy** - Ephemeral key exchange support detection
+- **Protocol Version Analysis** - TLS version support (TLS 1.2/1.3 recommended)
+- **Cipher Suite Analysis** - Encryption algorithm evaluation
+- **Certificate Authority Trust** - Issuer validation and trust assessment
+
+### 🛡️ **Security Headers Analysis (22+ Headers)**
+- **Critical Security Headers** (Maximum impact on security score)
+- **Important Security Headers** (High impact on security posture)
+- **Modern Security Headers** (Next-generation web security)
+- **Legacy Headers** (Older but still relevant security measures)
+- **Information Disclosure Headers** (Privacy and security through obscurity)
+- **Deprecated Headers** (Outdated security mechanisms)
+
+### ⚡ **Additional Security Protocol Checks (5 Tests)**
+- **HTTPS Redirect Verification** - Ensures HTTP traffic is properly redirected to HTTPS
+- **Mixed Content Detection** - Identifies insecure resources on HTTPS pages
+- **HTTP Methods Analysis** - Checks for potentially dangerous HTTP methods (TRACE, OPTIONS, etc.)
+- **Security.txt Compliance** - Validates security contact information (RFC 9116)
+- **Server Information Disclosure** - Analyzes server header information leakage
 
 ## Quick Start & Build Instructions
 
@@ -65,14 +98,26 @@ The application will be available at **http://localhost:3000**
 
 ## Features
 
-- **URL/IP Analysis**: Enter any URL or IP address for security analysis
-- **SSL Certificate Validation**: Check certificate validity, grade, and configuration
-- **Security Headers Detection**: Analyze presence and configuration of critical security headers
-- **Additional Security Checks**: HTTPS redirects, server information disclosure, and more
-- **Comprehensive Scoring**: Get an overall security score out of 100
-- **Multiple Export Formats**: Export reports in PDF, Excel, JSON, and CSV formats
-- **Responsive Design**: Bootstrap-based responsive interface
-- **Real-time Analysis**: Live security checking with visual feedback
+### 🎯 **Core Analysis Capabilities**
+- **Comprehensive SSL/TLS Analysis**: 12-test certificate security assessment with detailed grading
+- **Security Headers Detection**: 22+ critical, important, and modern security headers
+- **Additional Security Checks**: HTTPS redirects, mixed content, HTTP methods, and server disclosure
+- **Advanced Certificate Validation**: Chain verification, revocation checking, and cryptographic analysis
+- **Protocol Security Assessment**: TLS version analysis and cipher suite evaluation
+
+### 💯 **Scoring & Reporting**
+- **Weighted Scoring System**: Critical security issues have higher impact on overall score
+- **Detailed Grade Calculation**: SSL certificates graded from F to A+ based on comprehensive criteria
+- **Security Recommendations**: Actionable advice for improving security posture
+- **Multiple Export Formats**: PDF, Excel, JSON, and CSV report generation
+- **Performance Metrics**: Analysis timing and efficiency tracking
+
+### 🌐 **User Experience**
+- **URL/IP Analysis**: Enter any URL or IP address for comprehensive security analysis
+- **Real-time Analysis**: Live security checking with visual progress feedback
+- **Responsive Design**: Bootstrap-based responsive interface for all devices
+- **Fast Mode**: Quick analysis option for basic security assessment
+- **Comprehensive Mode**: Detailed analysis including advanced SSL vulnerability testing
 
 ## Security Headers Analyzed
 
@@ -164,86 +209,206 @@ npm run dev
 
 ### POST /api/analyze
 
-Analyzes a given URL for security headers and SSL configuration.
+Performs comprehensive security analysis of a given URL including SSL/TLS certificates, security headers, and additional security protocol checks.
 
 **Request Body:**
 ```json
 {
-  "url": "https://example.com"
+  "url": "https://example.com",
+  "fast": false  // Optional: true for quick analysis, false for comprehensive
 }
 ```
+
+**Response Structure:**
+```json
+{
+  "analysis": {
+    "url": "https://example.com/",
+    "timestamp": "2025-07-30T12:00:00.000Z",
+    "analysisTime": "2.5s",
+    "version": "1.0.0"
+  },
+  "security": {
+    "score": 85,
+    "grade": "A",
+    "riskLevel": "Low",
+    "scoreBreakdown": {
+      "ssl": 28.5,
+      "headers": 34.0,
+      "additional": 8.0,
+      "accessibility": 10.0
+    }
+  },
+  "details": {
+    "ssl": {
+      "valid": true,
+      "grade": "A+",
+      "score": 95,
+      "issuer": "Let's Encrypt Authority X3",
+      "subject": "example.com",
+      "validFrom": "Jan 15 00:00:00 2024 GMT",
+      "validTo": "Apr 15 23:59:59 2025 GMT",
+      "keyLength": 2048,
+      "protocol": "TLSv1.3",
+      "certificateChain": [...],
+      "tests": [
+        {
+          "name": "Certificate Validity",
+          "status": "pass",
+          "description": "Certificate is valid and properly configured"
+        },
+        {
+          "name": "Certificate Expiration",
+          "status": "pass", 
+          "description": "Certificate expires on Apr 15 23:59:59 2025 GMT"
+        }
+        // ... 10 more SSL tests
+      ]
+    },
+    "headers": {
+      "headers": [
+        {
+          "name": "Strict-Transport-Security",
+          "present": true,
+          "value": "max-age=31536000; includeSubDomains",
+          "status": "pass",
+          "category": "critical",
+          "score": 10
+        }
+        // ... 21 more header checks
+      ],
+      "score": {
+        "score": 85,
+        "maxScore": 100,
+        "scorePercentage": 85
+      }
+    },
+    "additional": {
+      "checks": [
+        {
+          "name": "HTTPS Redirect",
+          "status": "pass",
+          "description": "HTTP requests properly redirect to HTTPS",
+          "score": 2,
+          "maxScore": 2
+        }
+        // ... 4 more additional checks
+      ]
+    }
+  }
+}
+```
+
+### GET /api/health
+
+Health check endpoint for monitoring application status.
 
 **Response:**
 ```json
 {
-  "url": "https://example.com",
-  "domain": "example.com",
-  "timestamp": "2025-07-28T12:00:00.000Z",
-  "ssl": {
-    "valid": true,
-    "grade": "A+",
-    "issuer": "Let's Encrypt Authority X3",
-    "validFrom": "2024-01-15T00:00:00Z",
-    "validTo": "2025-04-15T23:59:59Z"
-  },
-  "headers": [...],
-  "additional": [...],
-  "score": 85
+  "status": "healthy",
+  "timestamp": "2025-07-30T12:00:00.000Z",
+  "uptime": "2h 15m 30s",
+  "version": "1.0.0"
 }
 ```
 
-### GET /health
-
-Health check endpoint for monitoring.
-
 ## Security Features
 
-### SSL/TLS Analysis
-- Certificate validity verification
-- SSL grade calculation (A+ to F)
-- Protocol version detection
-- Key strength analysis
-- Certificate chain verification
+### 🔐 **SSL/TLS Certificate Analysis (175 Points Maximum)**
+- **Certificate Validity Verification** - Ensures certificates are properly signed and trusted
+- **Expiration Monitoring** - Alerts for certificates expiring within 30 days (critical within 7 days)
+- **Hostname Matching** - Validates certificate matches the requested domain
+- **Key Strength Assessment** - Evaluates RSA (≥2048-bit) and ECDSA (≥256-bit) key sizes
+- **Signature Algorithm Security** - Checks for secure algorithms (SHA-256+, excludes MD5/SHA-1)
+- **Certificate Chain Validation** - Verifies complete chain to trusted root CA
+- **Protocol Version Analysis** - Detects TLS 1.2/1.3 support and flags deprecated versions
+- **Cipher Suite Evaluation** - Analyzes encryption algorithms and forward secrecy
+- **Certificate Authority Trust** - Validates issuer reputation and trust status
+- **Revocation Status Checking** - OCSP and CRL validation awareness
+- **Certificate Pinning Detection** - Identifies HPKP implementation
+- **Vulnerability Assessment** - Tests for common SSL/TLS vulnerabilities (optional comprehensive mode)
 
-### Header Analysis
-- Critical security headers detection
-- Header value validation
-- Security recommendations
-- Best practice compliance
+### 🛡️ **Security Headers Comprehensive Analysis**
 
-### Additional Checks
-- HTTPS redirect verification
-- Server information disclosure
-- Mixed content detection
-- HTTP methods analysis
-- Security.txt file presence (RFC 9116)
+#### Critical Security Headers (Maximum Security Impact)
+- **Strict-Transport-Security (HSTS)** - Enforces secure HTTPS connections and prevents downgrade attacks
+- **Content-Security-Policy (CSP)** - Controls resource loading to prevent XSS and data injection attacks
+- **X-Frame-Options** - Prevents clickjacking attacks through iframe restrictions
+- **X-Content-Type-Options** - Prevents MIME type sniffing vulnerabilities
+
+#### Important Security Headers (High Security Impact)
+- **Referrer-Policy** - Controls referrer information sent with cross-origin requests
+- **Permissions-Policy** - Controls browser feature access and API permissions
+- **Access-Control-Allow-Origin** - Manages cross-origin resource sharing (CORS) policies
+- **Cross-Origin-Embedder-Policy (COEP)** - Controls cross-origin resource embedding
+- **Cross-Origin-Opener-Policy (COOP)** - Controls cross-origin window interactions
+- **Cross-Origin-Resource-Policy (CORP)** - Controls cross-origin resource access
+
+#### Modern Security Headers (Next-Generation Protection)
+- **NEL (Network Error Logging)** - Enables network error monitoring and reporting
+- **Report-To** - Configures endpoints for security violation reporting
+- **Expect-CT** - Certificate Transparency monitoring (being deprecated)
+
+#### Legacy Headers (Backward Compatibility)
+- **X-XSS-Protection** - Legacy XSS filter header (superseded by CSP)
+- **X-Permitted-Cross-Domain-Policies** - Controls Adobe Flash and PDF cross-domain policies
+- **Pragma** - Legacy cache control header
+- **Cache-Control** - Controls caching behavior to prevent sensitive data exposure
+
+#### Information Disclosure Headers (Security Through Obscurity)
+- **Server** - Server software information (recommended to remove/obfuscate)
+- **X-Powered-By** - Technology stack information (recommended to remove)
+- **X-AspNet-Version** - ASP.NET version information (security risk if present)
+- **Via** - Proxy/gateway information (potential information disclosure)
+
+### ⚡ **Additional Security Protocol Checks**
+- **HTTPS Redirect Verification** - Ensures HTTP requests are properly redirected to HTTPS (301/302 status)
+- **Mixed Content Detection** - Identifies insecure HTTP resources loaded on HTTPS pages
+- **HTTP Methods Analysis** - Checks for potentially dangerous methods (TRACE, DELETE, PUT)
+- **Security.txt File Compliance** - Validates security contact information per RFC 9116
+- **Server Information Disclosure Analysis** - Comprehensive server header and version detection
 
 ## Scoring System
 
-The security score is calculated based on:
+The comprehensive security score is calculated using a weighted system across three main categories:
 
-- **SSL Certificate (30 points)**: Grade-based scoring from F (0 points) to A+ (30 points)
-- **Security Headers (60 points)**: 
-  - Critical headers (weighted 3x): HSTS, CSP, X-Frame-Options, X-Content-Type-Options
-  - Important headers (weighted 2x): Referrer-Policy, Permissions-Policy, Cache-Control
-  - Modern headers (weighted 1.5x): COEP, COOP, CORP, Origin-Agent-Cluster
-  - Additional headers (weighted 1x): Various security enhancements
-  - Legacy headers (weighted 0.5x): Partial credit for older standards
-  - Information disclosure headers: Good when absent (negative when present)
-- **Additional Checks (10 points)**: HTTPS redirects, mixed content, HTTP methods, etc.
+### 🔐 **SSL/TLS Certificate Score (30% Weight - Up to 175 Points)**
+- **Grade-based Scoring**: A+ (175 pts) → A (150 pts) → B (125 pts) → C (100 pts) → D (75 pts) → F (0 pts)
+- **Certificate Validity**: Valid certificates receive full points, expired/invalid receive 0
+- **Key Strength**: RSA ≥2048-bit or ECDSA ≥256-bit for full points
+- **Protocol Security**: TLS 1.2+ required, TLS 1.3 preferred
+- **Algorithm Security**: SHA-256+ signatures, no MD5/SHA-1
+- **Chain Validation**: Complete chain to trusted root CA
+- **Vulnerability Deductions**: Critical (-15), High (-10), Medium (-5), Low (-2) per vulnerability
 
-### Score Interpretation
+### 🛡️ **Security Headers Score (40% Weight - 100 Points)**
+- **Critical Headers (3x Weight)**: HSTS, CSP, X-Frame-Options, X-Content-Type-Options
+- **Important Headers (2x Weight)**: Referrer-Policy, Permissions-Policy, CORS headers
+- **Modern Headers (1.5x Weight)**: COEP, COOP, CORP, NEL, Report-To
+- **Additional Headers (1x Weight)**: Cache-Control, Expect-CT, etc.
+- **Legacy Headers (0.5x Weight)**: X-XSS-Protection, Pragma, etc.
+- **Information Disclosure Penalty**: Points deducted for Server, X-Powered-By headers
 
-| Grade | Score Range | Description |
-|-------|-------------|-------------|
-| **A+** | 90-100 | Excellent security posture - industry best practices |
-| **A**  | 80-89  | Very good security implementation |
-| **B**  | 70-79  | Good security with minor improvements needed |
-| **C**  | 60-69  | Adequate security but needs attention |
-| **D**  | 40-59  | Poor security - immediate attention needed |
-| **F**  | 0-39   | Critical security issues detected |
+### ⚡ **Additional Security Checks (20% Weight)**
+- **HTTPS Redirect** (2 points): Proper HTTP→HTTPS redirection
+- **Mixed Content** (2 points): No insecure resources on HTTPS pages
+- **HTTP Methods** (2 points): Secure HTTP method configuration
+- **Security.txt** (1 point): Proper security contact information
+- **Server Info Disclosure** (1 point): Minimal server information exposure
 
-The scoring system uses weighted calculations where critical headers (HSTS, CSP) have more impact than legacy headers, and modern security features receive appropriate recognition.
+### 📊 **Final Grade Calculation**
+
+| Grade | Score Range | Security Posture | Action Required |
+|-------|-------------|------------------|-----------------|
+| **A+** | 90-100 | Exceptional | Maintain current security standards |
+| **A**  | 80-89  | Excellent | Minor optimizations possible |
+| **B**  | 70-79  | Good | Some improvements recommended |
+| **C**  | 60-69  | Fair | Security improvements needed |
+| **D**  | 40-59  | Poor | Immediate attention required |
+| **F**  | 0-39   | Critical | Urgent security fixes needed |
+
+**Formula**: `Final Score = (SSL Score × 0.3) + (Headers Score × 0.4) + (Additional Checks × 0.2)`
 
 ## File Structure
 
