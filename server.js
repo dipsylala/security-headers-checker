@@ -53,7 +53,7 @@ app.post('/api/analyze', async (req, res) => {
     const startTime = Date.now();
 
     try {
-        const { url } = req.body;
+        const { url, fast } = req.body;
 
         if (!url) {
             return res.status(400).json({
@@ -84,10 +84,10 @@ app.post('/api/analyze', async (req, res) => {
         // Step 2: Check reachability before expensive operations
         console.log(`[${new Date().toISOString()}] Checking reachability...`);
         const reachabilityResult = await checkReachabilityWithRetry(validatedUrl, 1, 5000); // 1 retry, 5s timeout
-        
+
         if (!reachabilityResult.reachable) {
             const suggestions = getReachabilitySuggestions(reachabilityResult);
-            
+
             return res.status(503).json({
                 error: 'Host unreachable',
                 message: reachabilityResult.message,
@@ -101,19 +101,17 @@ app.post('/api/analyze', async (req, res) => {
                 suggestions: suggestions
             });
         }
-        
+
         console.log(`[${new Date().toISOString()}] Host reachable (${reachabilityResult.responseTime}ms) - proceeding with security analysis...`);
 
         // Step 3: Perform parallel security checks
         console.log(`[${new Date().toISOString()}] Performing security checks...`);
 
-        // Extract hostname for analysis
-        const urlObj = new URL(validatedUrl);
-        const hostname = urlObj.hostname;
-        const port = urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80);
-
         const [sslResult, headersResult, additionalResult] = await Promise.allSettled([
-            sslAnalyzer.performSSLAnalysis(validatedUrl, { debug: false }), // Orchestrated SSL analysis
+            sslAnalyzer.performSSLAnalysis(validatedUrl, {
+                debug: false,
+                fast: fast || false // Skip SSLyze if fast mode is requested
+            }), // Orchestrated SSL analysis
             securityHeaders.checkSecurityHeaders(validatedUrl),
             webSecurity.performWebSecurityChecks(validatedUrl)
         ]);

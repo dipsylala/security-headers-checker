@@ -6,7 +6,7 @@
             // Test the 10 comprehensive SSL tests
             if (analysis.tests && Array.isArray(analysis.tests)) {
                 console.log(`🔍 Total SSL Tests: ${analysis.tests.length}`);
-                
+
                 analysis.tests.forEach((test, index) => {
                     const statusIcon = test.status === 'pass' ? '✅' : test.status === 'fail' ? '❌' : '⚠️';
                     console.log(`   ${statusIcon} ${test.name}: ${test.status}`);
@@ -90,7 +90,7 @@ async function testGitHubComprehensiveSSL() {
     console.log('📡 URL: https://github.com');
 
     try {
-                const result = await performComprehensiveSSLAnalysis('https://github.com');
+        const result = await performComprehensiveSSLAnalysis('https://github.com');
 
         console.log(`📊 Status: ${result.statusCode}`);
         console.log(`⏱️ Analysis Time: ${result.body.analysis?.analysisTime || 'N/A'}`);
@@ -104,8 +104,8 @@ async function testGitHubComprehensiveSSL() {
             // Test the 10 comprehensive SSL tests
             if (analysis.tests && Array.isArray(analysis.tests)) {
                 console.log(`� Total SSL Tests: ${analysis.tests.length}`);
-                
-                analysis.tests.forEach((test, index) => {
+
+                analysis.tests.forEach((test, _) => {
                     const statusIcon = test.status === 'PASS' ? '✅' : test.status === 'FAIL' ? '❌' : '⚠️';
                     console.log(`   ${statusIcon} ${test.name}: ${test.status}`);
                     if (test.details) {
@@ -210,14 +210,14 @@ async function testComprehensiveSSLErrorHandling() {
             return true;
         } else {
             console.log(`❌ Expected 400 error for invalid URL, got: ${result.statusCode}`);
-            
+
             // If we got a 200 but the result shows connection failures, that's also acceptable
             if (result.statusCode === 200 && result.body.details && result.body.details.detailedSsl && !result.body.details.detailedSsl.supported) {
                 console.log('✅ URL treated as valid but SSL analysis correctly failed');
                 console.log('✅ Comprehensive SSL Analysis error handling test passed\n');
                 return true;
             }
-            
+
             console.log('');
             return false;
         }

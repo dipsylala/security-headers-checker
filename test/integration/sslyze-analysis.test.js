@@ -1,4 +1,3 @@
-const assert = require('assert');
 const http = require('http');
 const { checkSSLyzeAvailability, runSSLyzeScan, convertSSLyzeToTests } = require('../../lib/ssl-analyzer/sslyze-integration');
 
@@ -72,7 +71,7 @@ async function testSSLyzeAvailability() {
 
     try {
         const availability = await checkSSLyzeAvailability();
-        
+
         console.log(`📦 SSLyze Available: ${availability.available}`);
         if (availability.available) {
             console.log(`📌 SSLyze Version: ${availability.version}`);
@@ -108,26 +107,26 @@ async function testDirectSSLyzeScan() {
         }
 
         const scanResult = await runSSLyzeScan('github.com', 443);
-        
+
         console.log(`📊 Scan Success: ${scanResult.success}`);
         if (scanResult.success) {
             console.log(`📋 Data Available: ${scanResult.data ? 'Yes' : 'No'}`);
-            
+
             if (scanResult.data && scanResult.data.server_scan_results) {
                 const serverResults = scanResult.data.server_scan_results[0];
                 console.log(`🔗 Server: ${serverResults.server_info?.hostname || 'Unknown'}`);
                 console.log(`🏃 Scan Commands: ${Object.keys(serverResults.scan_commands_results || {}).length}`);
-                
+
                 // Test conversion to our test format
                 const tests = convertSSLyzeToTests(scanResult.data, 'github.com');
                 console.log(`🧪 Converted Tests: ${tests.length}`);
-                
+
                 tests.forEach(test => {
                     const statusIcon = test.status === 'pass' ? '✅' : test.status === 'fail' ? '❌' : '⚠️';
                     console.log(`   ${statusIcon} ${test.name}: ${test.status}`);
                 });
             }
-            
+
             console.log('✅ Direct SSLyze scan test PASSED\n');
             return { passed: true, testsGenerated: scanResult.data ? true : false };
         } else {
@@ -150,26 +149,26 @@ async function testSSLyzeIntegrationInAPI() {
 
     try {
         const analysis = await performSecurityAnalysis('https://github.com');
-        
+
         console.log(`📊 Analysis Success: ${analysis.success !== false}`);
-        
+
         if (analysis.details && analysis.details.detailedSsl) {
             const detailedSsl = analysis.details.detailedSsl;
-            
+
             console.log(`🎯 SSL Grade: ${detailedSsl.summary?.grade || 'N/A'}`);
             console.log(`📈 SSL Score: ${detailedSsl.summary?.score || 'N/A'}/${detailedSsl.summary?.maxScore || 'N/A'}`);
             console.log(`🧪 Total Tests: ${detailedSsl.tests?.length || 0}`);
-            
+
             // Check for SSLyze-specific tests
             const sslyzeTests = detailedSsl.tests?.filter(test => test.name.toLowerCase().includes('sslyze')) || [];
             console.log(`🔍 SSLyze Tests: ${sslyzeTests.length}`);
-            
+
             if (detailedSsl.sslyzeInfo) {
                 console.log(`📦 SSLyze Available: ${detailedSsl.sslyzeInfo.available}`);
                 console.log(`📌 SSLyze Version: ${detailedSsl.sslyzeInfo.version || 'Unknown'}`);
                 console.log(`🧪 SSLyze Tests Run: ${detailedSsl.sslyzeInfo.testsRun || 0}`);
             }
-            
+
             // Display SSLyze test results
             if (sslyzeTests.length > 0) {
                 console.log('🔍 SSLyze Test Results:');
@@ -181,10 +180,10 @@ async function testSSLyzeIntegrationInAPI() {
                     }
                 });
             }
-            
+
             console.log('✅ SSLyze integration in API test PASSED\n');
-            return { 
-                passed: true, 
+            return {
+                passed: true,
                 sslyzeTestsFound: sslyzeTests.length,
                 sslyzeAvailable: detailedSsl.sslyzeInfo?.available || false
             };
@@ -193,7 +192,7 @@ async function testSSLyzeIntegrationInAPI() {
             console.log('❌ SSLyze integration in API test FAILED\n');
             return { passed: false, error: 'No detailed SSL analysis found' };
         }
-        
+
     } catch (error) {
         console.log(`❌ SSLyze integration in API test FAILED: ${error.message}\n`);
         return { passed: false, error: error.message };
@@ -218,20 +217,20 @@ async function testSSLyzeVulnerabilityDetection() {
 
         // Test with a site known to have good SSL configuration
         const scanResult = await runSSLyzeScan('badssl.com', 443);
-        
+
         console.log(`📊 Scan Success: ${scanResult.success}`);
-        
+
         if (scanResult.success && scanResult.data) {
             const tests = convertSSLyzeToTests(scanResult.data, 'badssl.com');
-            const vulnTests = tests.filter(test => 
+            const vulnTests = tests.filter(test =>
                 test.name.toLowerCase().includes('heartbleed') ||
                 test.name.toLowerCase().includes('robot') ||
                 test.name.toLowerCase().includes('ccs') ||
                 test.name.toLowerCase().includes('vulnerabil')
             );
-            
+
             console.log(`🛡️ Vulnerability Tests Found: ${vulnTests.length}`);
-            
+
             vulnTests.forEach(test => {
                 const statusIcon = test.status === 'pass' ? '✅' : test.status === 'fail' ? '❌' : '⚠️';
                 console.log(`   ${statusIcon} ${test.name}: ${test.status}`);
@@ -239,10 +238,10 @@ async function testSSLyzeVulnerabilityDetection() {
                     console.log(`      └─ ${test.details}`);
                 }
             });
-            
+
             console.log('✅ SSLyze vulnerability detection test PASSED\n');
-            return { 
-                passed: true, 
+            return {
+                passed: true,
                 vulnerabilityTestsFound: vulnTests.length,
                 allTestsCount: tests.length
             };
@@ -251,7 +250,7 @@ async function testSSLyzeVulnerabilityDetection() {
             console.log('❌ SSLyze vulnerability detection test FAILED\n');
             return { passed: false, error: scanResult.error };
         }
-        
+
     } catch (error) {
         console.log(`❌ SSLyze vulnerability detection test FAILED: ${error.message}\n`);
         return { passed: false, error: error.message };
@@ -280,26 +279,26 @@ async function testSSLyzeWithDifferentConfigurations() {
         }
 
         const results = [];
-        
+
         for (const target of testTargets) {
             console.log(`🔍 Testing ${target.hostname}:${target.port} (${target.description})`);
-            
+
             try {
                 const scanResult = await runSSLyzeScan(target.hostname, target.port);
-                
+
                 if (scanResult.success && scanResult.data) {
                     const tests = convertSSLyzeToTests(scanResult.data, target.hostname);
                     const protocolTests = tests.filter(test => test.name.toLowerCase().includes('protocol'));
-                    
+
                     console.log(`   📋 Total Tests: ${tests.length}`);
                     console.log(`   🔐 Protocol Tests: ${protocolTests.length}`);
-                    
+
                     protocolTests.forEach(test => {
                         if (test.sslyzeData && test.sslyzeData.supportedProtocols) {
                             console.log(`   📌 Protocols: ${test.sslyzeData.supportedProtocols.join(', ')}`);
                         }
                     });
-                    
+
                     results.push({ target: target.hostname, success: true, tests: tests.length });
                 } else {
                     console.log(`   ❌ Scan failed: ${scanResult.error}`);
@@ -310,10 +309,10 @@ async function testSSLyzeWithDifferentConfigurations() {
                 results.push({ target: target.hostname, success: false, error: error.message });
             }
         }
-        
+
         const successfulScans = results.filter(r => r.success).length;
         console.log(`📊 Successful Scans: ${successfulScans}/${results.length}`);
-        
+
         if (successfulScans > 0) {
             console.log('✅ SSLyze configuration tests PASSED\n');
             return { passed: true, successfulScans, totalScans: results.length, results };
@@ -321,7 +320,7 @@ async function testSSLyzeWithDifferentConfigurations() {
             console.log('❌ SSLyze configuration tests FAILED - no successful scans\n');
             return { passed: false, results };
         }
-        
+
     } catch (error) {
         console.log(`❌ SSLyze configuration tests FAILED: ${error.message}\n`);
         return { passed: false, error: error.message };
@@ -359,7 +358,7 @@ async function runSSLyzeTests() {
                 skipped: result.skipped || false,
                 details: result
             });
-            
+
             // Track SSLyze availability for summary
             if (test.name === 'SSLyze Availability' && result.available) {
                 sslyzeAvailable = true;
@@ -421,15 +420,15 @@ async function testSSLyzeHighPriorityFeatures() {
 
     try {
         const result = await performSecurityAnalysis('https://github.com');
-        
+
         if (!result.ssl || !result.ssl.sslyzeTests) {
             console.log('⚠️ SSLyze tests not found in result');
             return { passed: false, error: 'SSLyze tests not found' };
         }
-        
+
         const sslyzeTests = result.ssl.sslyzeTests;
         console.log(`📊 Found ${sslyzeTests.length} SSLyze test results`);
-        
+
         // Check for high-priority features
         const highPriorityTests = [
             'SSLyze TLS Fallback SCSV',
@@ -438,10 +437,10 @@ async function testSSLyzeHighPriorityFeatures() {
             'SSLyze OCSP Stapling',
             'SSLyze Extended Master Secret'
         ];
-        
+
         let foundTests = 0;
         let passedTests = 0;
-        
+
         for (const testName of highPriorityTests) {
             const test = sslyzeTests.find(t => t.name === testName);
             if (test) {
@@ -449,22 +448,22 @@ async function testSSLyzeHighPriorityFeatures() {
                 console.log(`🔍 ${testName}: ${test.status.toUpperCase()}`);
                 console.log(`   📝 ${test.details}`);
                 console.log(`   📊 Score: ${test.score}`);
-                
+
                 if (test.status === 'pass') {
                     passedTests++;
                 }
-                
+
                 if (test.recommendation) {
                     console.log(`   💡 ${test.recommendation}`);
                 }
                 console.log('');
             }
         }
-        
+
         console.log(`📈 High-Priority Features Summary:`);
         console.log(`   Found: ${foundTests}/${highPriorityTests.length} tests`);
         console.log(`   Passed: ${passedTests}/${foundTests} tests`);
-        
+
         if (foundTests >= 4) {
             console.log('✅ SSLyze high-priority features test PASSED\n');
             return { passed: true, foundTests, passedTests, totalTests: highPriorityTests.length };
@@ -472,7 +471,7 @@ async function testSSLyzeHighPriorityFeatures() {
             console.log('⚠️ SSLyze high-priority features test incomplete (some features missing)\n');
             return { passed: true, foundTests, passedTests, totalTests: highPriorityTests.length, warning: 'Incomplete feature set' };
         }
-        
+
     } catch (error) {
         console.log(`❌ SSLyze high-priority features test FAILED: ${error.message}\n`);
         return { passed: false, error: error.message };
@@ -480,7 +479,7 @@ async function testSSLyzeHighPriorityFeatures() {
 }
 
 // Export for use in main test runner
-module.exports = { 
+module.exports = {
     runSSLyzeTests,
     testSSLyzeAvailability,
     testDirectSSLyzeScan,

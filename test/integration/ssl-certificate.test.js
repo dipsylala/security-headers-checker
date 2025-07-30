@@ -9,13 +9,17 @@ const http = require('http');
 /**
  * Make HTTP request to the analysis API
  * @param {string} url - URL to analyze
+ * @param {Object} options - Request options
  * @returns {Promise<Object>} Analysis result
  */
-function performSecurityAnalysis(url) {
+function performSecurityAnalysis(url, options = {}) {
     return new Promise((resolve, reject) => {
-        const postData = JSON.stringify({ url });
+        const postData = JSON.stringify({
+            url,
+            fast: options.fast || false // Add fast option for basic SSL tests
+        });
 
-        const options = {
+        const requestOptions = {
             hostname: 'localhost',
             port: 3000,
             path: '/api/analyze',
@@ -23,10 +27,11 @@ function performSecurityAnalysis(url) {
             headers: {
                 'Content-Type': 'application/json',
                 'Content-Length': Buffer.byteLength(postData)
-            }
+            },
+            timeout: options.timeout || 15000 // Reduced timeout for faster tests
         };
 
-        const req = http.request(options, (res) => {
+        const req = http.request(requestOptions, (res) => {
             let data = '';
 
             res.on('data', (chunk) => {
@@ -49,6 +54,11 @@ function performSecurityAnalysis(url) {
 
         req.on('error', (error) => {
             reject(error);
+        });
+
+        req.on('timeout', () => {
+            req.destroy();
+            reject(new Error(`Request timeout - analysis took longer than ${requestOptions.timeout / 1000} seconds`));
         });
 
         req.write(postData);
@@ -109,7 +119,7 @@ async function runSSLTests() {
         console.log(`📡 URL: ${test.url}`);
 
         try {
-            const analysis = await performSecurityAnalysis(test.url);
+            const analysis = await performSecurityAnalysis(test.url, { fast: true }); // Use fast mode for SSL tests
             const ssl = analysis.details.ssl; // Updated path for modular API
 
             // Display SSL information

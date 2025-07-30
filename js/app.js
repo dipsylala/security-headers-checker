@@ -103,13 +103,13 @@ class SecurityChecker {
         // Create error display in the results section
         const resultsSection = document.getElementById('resultsSection');
         resultsSection.style.display = 'block';
-        
+
         // Determine the appropriate icon and context based on error type
         let iconClass = 'fas fa-exclamation-triangle';
         let iconColorClass = 'text-danger';
         let errorType = 'Connection Error';
         let errorContext = 'Unable to reach the target host';
-        
+
         if (details && details.includes('ENOTFOUND')) {
             iconClass = 'fas fa-globe-americas';
             iconColorClass = 'text-warning';
@@ -126,7 +126,7 @@ class SecurityChecker {
             errorType = 'Connection Refused';
             errorContext = 'Host actively refused the connection';
         }
-        
+
         resultsSection.innerHTML = `
             <div class="error-display">
                 <div class="alert alert-danger" role="alert">
@@ -190,7 +190,7 @@ class SecurityChecker {
             if (!response.ok) {
                 // Handle different types of errors
                 const errorData = await response.json().catch(() => null);
-                
+
                 if (response.status === 503 && errorData) {
                     // Reachability error - show detailed information
                     throw new ReachabilityError(errorData);
@@ -223,14 +223,14 @@ class SecurityChecker {
             return results;
         } catch (error) {
             console.error('Error calling API:', error);
-            
+
             // Handle specific error types
             if (error instanceof ReachabilityError) {
                 throw error; // Re-throw to be handled by the calling method
             } else if (error instanceof ValidationError) {
                 throw error; // Re-throw to be handled by the calling method
             }
-            
+
             // Fallback to simulated data if API fails with network error
             const domain = this.extractDomain(url);
 
@@ -404,7 +404,7 @@ class SecurityChecker {
 
         // Update overall score
         this.updateOverallScore(results.score);
-        
+
         // Debug: Ensure grade boundaries are added after a short delay for DOM stability
         setTimeout(() => {
             this.addGradeBoundaries();
@@ -486,7 +486,7 @@ class SecurityChecker {
 
     addGradeBoundaries() {
         const progressContainer = document.getElementById('scoreProgress');
-        
+
         if (!progressContainer) {
             console.error('Score progress container not found for grade boundaries');
             return;
@@ -537,13 +537,13 @@ class SecurityChecker {
         // Insert boundaries after the progress bar more safely
         const parentElement = progressContainer.parentElement;
         const nextElement = progressContainer.nextSibling;
-        
+
         if (nextElement) {
             parentElement.insertBefore(boundariesContainer, nextElement);
         } else {
             parentElement.appendChild(boundariesContainer);
         }
-        
+
         console.log('Grade boundaries added successfully - element created with class:', boundariesContainer.className);
     }
 
@@ -645,7 +645,7 @@ class SecurityChecker {
             const statusIcon = this.getSSLStatusIcon(test.status);
             const statusBadge = this.getSSLStatusBadge(test.status);
             const statusText = this.getSSLStatusText(test.status);
-            
+
             html += `
                 <div class="security-item ${statusClass} mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1020,7 +1020,7 @@ class SecurityChecker {
         }
 
         const chainId = `chain-${Date.now()}`; // Unique ID for this chain
-        
+
         let html = `
             <div class="certificate-chain mb-4">
                 <h6 class="mb-3">
@@ -1039,7 +1039,7 @@ class SecurityChecker {
             const isRoot = cert.isRoot;
             const validityClass = this.getCertificateValidityClass(cert.validity?.status);
             const typeIcon = this.getCertificateTypeIcon(cert.type);
-            
+
             html += `
                 <div class="certificate-item ${isLeaf ? 'leaf-cert' : ''} ${isRoot ? 'root-cert' : ''} mb-3">
                     <div class="cert-header d-flex justify-content-between align-items-center mb-2">
@@ -1128,18 +1128,18 @@ class SecurityChecker {
     }
 
     displayCertificateExtensions(cert) {
-        if (!cert.extensions) return '';
-        
+        if (!cert.extensions) { return ''; }
+
         let html = '';
         const extensions = cert.extensions;
-        
+
         if (extensions.subjectAltName || extensions.keyUsage || extensions.isCa) {
             html += `
                 <div class="cert-extensions mt-2">
                     <small><strong>Extensions:</strong></small>
                     <div class="extensions-list">
             `;
-            
+
             if (extensions.subjectAltName) {
                 html += `<span class="badge bg-light text-dark me-1">SAN</span>`;
             }
@@ -1149,40 +1149,40 @@ class SecurityChecker {
             if (extensions.isCa) {
                 html += `<span class="badge bg-warning text-dark me-1">CA Certificate</span>`;
             }
-            
+
             html += `
                     </div>
                 </div>
             `;
         }
-        
+
         return html;
     }
 
     displayOrganizationInfo(cert) {
-        if (!cert.organizationInfo) return '';
-        
+        if (!cert.organizationInfo) { return ''; }
+
         const org = cert.organizationInfo.subject;
-        if (!org.organization && !org.country) return '';
-        
+        if (!org.organization && !org.country) { return ''; }
+
         let html = `
             <div class="organization-info mt-2">
                 <small><strong>Organization:</strong></small>
                 <div class="org-details">
         `;
-        
+
         if (org.organization) {
             html += `<span class="text-muted">${org.organization}</span>`;
         }
         if (org.country) {
             html += `<span class="text-muted ms-2">(${org.country})</span>`;
         }
-        
+
         html += `
                 </div>
             </div>
         `;
-        
+
         return html;
     }
 
@@ -1196,17 +1196,17 @@ class SecurityChecker {
     }
 
     getCertificateTypeIcon(type) {
-        if (type.includes('Leaf')) return 'fas fa-certificate';
-        if (type.includes('Intermediate')) return 'fas fa-link';
-        if (type.includes('Root')) return 'fas fa-shield-alt';
+        if (type.includes('Leaf')) { return 'fas fa-certificate'; }
+        if (type.includes('Intermediate')) { return 'fas fa-link'; }
+        if (type.includes('Root')) { return 'fas fa-shield-alt'; }
         return 'fas fa-certificate';
     }
 
     formatDate(dateString) {
-        if (!dateString) return null;
+        if (!dateString) { return null; }
         try {
             return new Date(dateString).toLocaleDateString();
-        } catch (e) {
+        } catch (_) {
             return dateString;
         }
     }
@@ -1298,13 +1298,8 @@ function exportToPDF(results, filename) {
 
     // Grade explanation
     let gradeDesc = '';
-    if (results.score >= 90) gradeDesc = 'Excellent security posture!';
-    else if (results.score >= 80) gradeDesc = 'Very good security implementation';
-    else if (results.score >= 70) gradeDesc = 'Good security with minor improvements needed';
-    else if (results.score >= 60) gradeDesc = 'Adequate security but needs attention';
-    else if (results.score >= 40) gradeDesc = 'Poor security - immediate attention needed';
-    else gradeDesc = 'Critical security issues detected!';
-    
+    if (results.score >= 90) { gradeDesc = 'Excellent security posture!'; } else if (results.score >= 80) { gradeDesc = 'Very good security implementation'; } else if (results.score >= 70) { gradeDesc = 'Good security with minor improvements needed'; } else if (results.score >= 60) { gradeDesc = 'Adequate security but needs attention'; } else if (results.score >= 40) { gradeDesc = 'Poor security - immediate attention needed'; } else { gradeDesc = 'Critical security issues detected!'; }
+
     addText(`Assessment: ${gradeDesc}`, 12);
 
     // SSL Certificate Information
@@ -1313,14 +1308,14 @@ function exportToPDF(results, filename) {
     addText(`SSL Grade: ${results.ssl.grade || 'N/A'}`, 12);
     addText(`Issuer: ${results.ssl.issuer || 'Unknown'}`, 10);
     addText(`Subject: ${results.ssl.subject || 'Unknown'}`, 10);
-    
+
     if (results.ssl.validFrom) {
         addText(`Valid From: ${new Date(results.ssl.validFrom).toLocaleDateString()}`, 10);
     }
     if (results.ssl.validTo) {
         addText(`Valid To: ${new Date(results.ssl.validTo).toLocaleDateString()}`, 10);
     }
-    
+
     addText(`Key Length: ${results.ssl.keyLength || 'Unknown'} bits`, 10);
     addText(`Protocol: ${results.ssl.protocol || 'Unknown'}`, 10);
     addText(`Signature Algorithm: ${results.ssl.signatureAlgorithm || 'Unknown'}`, 10);
@@ -1347,12 +1342,12 @@ function exportToPDF(results, filename) {
 
     // Security Headers
     addSectionHeader('Security Headers Analysis');
-    
+
     if (results.headers && results.headers.length > 0) {
         // Group headers by category if available
         const categories = ['critical', 'important', 'modern', 'additional', 'legacy', 'deprecated', 'information'];
         const categorizedHeaders = {};
-        
+
         // Group headers
         results.headers.forEach(header => {
             const category = header.category || 'other';
@@ -1365,19 +1360,19 @@ function exportToPDF(results, filename) {
         // Display headers by category
         categories.forEach(category => {
             if (categorizedHeaders[category] && categorizedHeaders[category].length > 0) {
-                const categoryTitle = category.charAt(0).toUpperCase() + category.slice(1) + ' Headers';
+                const categoryTitle = `${category.charAt(0).toUpperCase() + category.slice(1) } Headers`;
                 addText(categoryTitle, 14, true);
-                
+
                 categorizedHeaders[category].forEach(header => {
                     const status = header.present ? 'Present' : 'Missing';
                     const statusColor = header.present ? '✓' : '✗';
                     addText(`${statusColor} ${header.name}: ${status}`, 11);
-                    
+
                     if (header.present && header.value) {
                         const wrappedValue = doc.splitTextToSize(`Value: ${header.value}`, 160);
                         wrappedValue.forEach(line => addText(`   ${line}`, 9));
                     }
-                    
+
                     if (header.description) {
                         const wrappedDesc = doc.splitTextToSize(`   ${header.description}`, 160);
                         wrappedDesc.forEach(line => addText(line, 9));
@@ -1403,7 +1398,7 @@ function exportToPDF(results, filename) {
     // Web Security Checks
     if (results.additional && results.additional.length > 0) {
         addSectionHeader('Web Security Checks');
-        
+
         results.additional.forEach(check => {
             let statusIcon = '';
             switch (check.status) {
@@ -1412,14 +1407,14 @@ function exportToPDF(results, filename) {
                 case 'warning': statusIcon = '⚠'; break;
                 default: statusIcon = 'ℹ';
             }
-            
+
             addText(`${statusIcon} ${check.name}: ${check.status.toUpperCase()}`, 11, true);
-            
+
             if (check.description) {
                 const wrappedDesc = doc.splitTextToSize(`   ${check.description}`, 160);
                 wrappedDesc.forEach(line => addText(line, 9));
             }
-            
+
             if (check.details) {
                 const wrappedDetails = doc.splitTextToSize(`   Details: ${check.details}`, 160);
                 wrappedDetails.forEach(line => addText(line, 9));
@@ -1431,7 +1426,7 @@ function exportToPDF(results, filename) {
     // Certificate Chain (if available)
     if (results.detailedSsl && results.detailedSsl.certificateDetails && results.detailedSsl.certificateDetails.chain) {
         addSectionHeader('Certificate Chain');
-        
+
         results.detailedSsl.certificateDetails.chain.forEach((cert, index) => {
             addText(`Certificate ${index + 1}: ${cert.type || 'Unknown Type'}`, 12, true);
             addText(`   Subject: ${cert.subject || 'Unknown'}`, 10);
@@ -1483,10 +1478,10 @@ function exportToExcel(results, filename) {
     }
 
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-    
+
     // Style the summary sheet
-    summarySheet['A1'] = { v: 'Security Headers Analysis Report', t: 's', s: { font: { bold: true, sz: 16 } } };
-    
+    summarySheet.A1 = { v: 'Security Headers Analysis Report', t: 's', s: { font: { bold: true, sz: 16 } } };
+
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
 
     // SSL Tests sheet (if detailed SSL data available)
@@ -1509,8 +1504,8 @@ function exportToExcel(results, filename) {
         });
 
         const sslTestsSheet = XLSX.utils.aoa_to_sheet(sslTestsData);
-        sslTestsSheet['A1'] = { v: 'SSL Certificate Tests', t: 's', s: { font: { bold: true, sz: 14 } } };
-        
+        sslTestsSheet.A1 = { v: 'SSL Certificate Tests', t: 's', s: { font: { bold: true, sz: 14 } } };
+
         XLSX.utils.book_append_sheet(workbook, sslTestsSheet, 'SSL Tests');
     }
 
@@ -1544,8 +1539,8 @@ function exportToExcel(results, filename) {
     }
 
     const headersSheet = XLSX.utils.aoa_to_sheet(headersData);
-    headersSheet['A1'] = { v: 'Security Headers Analysis', t: 's', s: { font: { bold: true, sz: 14 } } };
-    
+    headersSheet.A1 = { v: 'Security Headers Analysis', t: 's', s: { font: { bold: true, sz: 14 } } };
+
     XLSX.utils.book_append_sheet(workbook, headersSheet, 'Security Headers');
 
     // Web Security Checks sheet
@@ -1567,8 +1562,8 @@ function exportToExcel(results, filename) {
         });
 
         const additionalSheet = XLSX.utils.aoa_to_sheet(additionalData);
-        additionalSheet['A1'] = { v: 'Web Security Checks', t: 's', s: { font: { bold: true, sz: 14 } } };
-        
+        additionalSheet.A1 = { v: 'Web Security Checks', t: 's', s: { font: { bold: true, sz: 14 } } };
+
         XLSX.utils.book_append_sheet(workbook, additionalSheet, 'Web Security');
     }
 
@@ -1598,8 +1593,8 @@ function exportToExcel(results, filename) {
         });
 
         const chainSheet = XLSX.utils.aoa_to_sheet(chainData);
-        chainSheet['A1'] = { v: 'Certificate Chain', t: 's', s: { font: { bold: true, sz: 14 } } };
-        
+        chainSheet.A1 = { v: 'Certificate Chain', t: 's', s: { font: { bold: true, sz: 14 } } };
+
         XLSX.utils.book_append_sheet(workbook, chainSheet, 'Certificate Chain');
     }
 
@@ -1620,7 +1615,7 @@ function exportToExcel(results, filename) {
                 { wch: 30 }, // Column E
                 { wch: 40 }, // Column F
                 { wch: 40 }, // Column G
-                { wch: 30 }  // Column H
+                { wch: 30 } // Column H
             ];
             ws['!cols'] = cols;
         }

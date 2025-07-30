@@ -5,8 +5,8 @@
 
 const { runSSLTests } = require('./integration/ssl-certificate.test.js');
 const { runComprehensiveSSLTests } = require('./integration/comprehensive-ssl.test.js');
-const { runHeadersTests } = require('./integration/security-headers.test.js');
-const { runAdditionalChecksTests } = require('./integration/additional-checks.test.js');
+const { runHeadersTests } = require('./integration/security-headers-analysis.test.js');
+const { runAdditionalChecksTests } = require('./integration/web-security.test.js');
 const { runPerformanceTests } = require('./integration/performance.test.js');
 
 /**

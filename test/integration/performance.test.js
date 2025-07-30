@@ -51,6 +51,11 @@ function performSecurityAnalysis(url) {
             reject(error);
         });
 
+        req.on('timeout', () => {
+            req.destroy();
+            reject(new Error('Request timeout - analysis took longer than 30 seconds'));
+        });
+
         req.write(postData);
         req.end();
     });
