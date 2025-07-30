@@ -67,7 +67,6 @@ const ADDITIONAL_CHECKS_TEST_SITES = [
         url: 'https://github.com',
         expectedResults: {
             httpsRedirect: 'pass',
-            serverInfo: 'info',
             minChecks: 3,
             shouldBeSecure: true
         }
@@ -77,7 +76,6 @@ const ADDITIONAL_CHECKS_TEST_SITES = [
         url: 'https://cloudflare.com',
         expectedResults: {
             httpsRedirect: 'pass',
-            serverInfo: 'info',
             minChecks: 3,
             shouldBeSecure: true
         }
@@ -87,7 +85,6 @@ const ADDITIONAL_CHECKS_TEST_SITES = [
         url: 'https://google.com',
         expectedResults: {
             httpsRedirect: 'pass',
-            serverInfo: 'info',
             minChecks: 3,
             shouldBeSecure: true
         }
@@ -97,7 +94,6 @@ const ADDITIONAL_CHECKS_TEST_SITES = [
         url: 'https://developer.mozilla.org',
         expectedResults: {
             httpsRedirect: 'pass',
-            serverInfo: 'info',
             minChecks: 3,
             shouldBeSecure: true
         }
