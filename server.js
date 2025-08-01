@@ -8,6 +8,9 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 
+// Import centralized logger
+const logger = require('./lib/logger');
+
 // Import custom modules
 const { validateUrl, getUrlSecurityAssessment } = require('./lib/url-utils');
 const sslAnalyzer = require('./lib/ssl-analyzer/index.js');
@@ -62,7 +65,7 @@ app.post('/api/analyze', async (req, res) => {
             });
         }
 
-        console.log(`[${new Date().toISOString()}] Starting analysis for: ${url}`);
+        logger.info(`Starting analysis for URL: ${url.substring(0, 100)}${url.length > 100 ? '...' : ''}`);
 
         // Step 1: Validate URL
         const urlValidation = validateUrl(url);
@@ -82,7 +85,7 @@ app.post('/api/analyze', async (req, res) => {
         const urlAssessment = getUrlSecurityAssessment(validatedUrl);
 
         // Step 2: Check reachability before expensive operations
-        console.log(`[${new Date().toISOString()}] Checking reachability...`);
+        logger.info('Checking reachability...');
         const reachabilityResult = await checkReachabilityWithRetry(validatedUrl, 1, 5000); // 1 retry, 5s timeout
 
         if (!reachabilityResult.reachable) {
@@ -102,10 +105,10 @@ app.post('/api/analyze', async (req, res) => {
             });
         }
 
-        console.log(`[${new Date().toISOString()}] Host reachable (${reachabilityResult.responseTime}ms) - proceeding with security analysis...`);
+        logger.info(`Host reachable (${reachabilityResult.responseTime}ms) - proceeding with security analysis`);
 
         // Step 3: Perform parallel security checks
-        console.log(`[${new Date().toISOString()}] Performing security checks...`);
+        logger.info('Performing security checks...');
 
         const [sslResult, headersResult, additionalResult] = await Promise.allSettled([
             sslAnalyzer.performSSLAnalysis(validatedUrl, {
@@ -223,12 +226,12 @@ app.post('/api/analyze', async (req, res) => {
             warnings: urlValidation.warnings || []
         };
 
-        console.log(`[${new Date().toISOString()}] Analysis completed in ${analysisTime}ms - Score: ${securityAssessment.score}/100 (${securityAssessment.grade})`);
+        logger.info(`Analysis completed in ${analysisTime}ms - Score: ${securityAssessment.score}/100 (${securityAssessment.grade})`);
 
         res.json(response);
 
     } catch (error) {
-        console.error('Analysis error:', error);
+        logger.error('Analysis failed:', { error: error.message, stack: error.stack });
 
         const analysisTime = Date.now() - startTime;
 
@@ -318,7 +321,7 @@ app.use('*', (req, res) => {
 
 // Global error handler
 app.use((err, req, res, _next) => {
-    console.error('Server error:', err);
+    logger.error('Server error:', { error: err.message, stack: err.stack });
 
     res.status(500).json({
         error: 'Internal server error',
@@ -329,30 +332,30 @@ app.use((err, req, res, _next) => {
 
 // Start server
 app.listen(PORT, () => {
-    console.log(`🚀 WebCheck Validator running on http://localhost:${PORT}`);
-    console.log(`📊 API documentation available at http://localhost:${PORT}/api-docs`);
-    console.log(`🏥 Health check available at http://localhost:${PORT}/api/health`);
-    console.log(`📁 Serving static files from current directory`);
+    logger.info(`🚀 WebCheck Validator running on http://localhost:${PORT}`);
+    logger.info(`📊 API documentation available at http://localhost:${PORT}/api-docs`);
+    logger.info(`🏥 Health check available at http://localhost:${PORT}/api/health`);
+    logger.info(`📁 Serving static files from current directory`);
 
     // Log loaded modules
-    console.log('📦 Loaded modules:');
-    console.log('   ✓ URL Utilities');
-    console.log('   ✓ SSL Analyzer (Comprehensive)');
-    console.log('   ✓ Headers Checker');
-    console.log('   ✓ Additional Checks');
-    console.log('   ✓ Scoring System');
+    logger.info('📦 Loaded modules:');
+    logger.info('   ✓ URL Utilities');
+    logger.info('   ✓ SSL Analyzer (Comprehensive)');
+    logger.info('   ✓ Headers Checker');
+    logger.info('   ✓ Additional Checks');
+    logger.info('   ✓ Scoring System');
 
-    console.log(`\n🎯 Ready to analyze security headers and configurations!`);
+    logger.info(`🎯 Ready to analyze security headers and configurations!`);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-    console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
+    logger.info('Received SIGTERM, shutting down gracefully...');
     process.exit(0);
 });
 
 process.on('SIGINT', () => {
-    console.log('\n🛑 Received SIGINT, shutting down gracefully...');
+    logger.info('Received SIGINT, shutting down gracefully...');
     process.exit(0);
 });
 

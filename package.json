@@ -41,7 +41,8 @@
     "helmet": "^7.1.0",
     "node-fetch": "^3.3.2",
     "tls": "^0.0.1",
-    "url": "^0.11.3"
+    "url": "^0.11.3",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
