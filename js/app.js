@@ -426,6 +426,10 @@ class SecurityChecker {
 
     updateOverallScore(score) {
         const progressBar = document.getElementById('scoreProgressBar');
+        if (!progressBar) {
+            console.error('scoreProgressBar element not found');
+            return;
+        }
         progressBar.style.width = `${score }%`;
 
         // Update progress bar color and description based on score
@@ -466,6 +470,10 @@ class SecurityChecker {
 
         // Update the score display with grade badge properly positioned
         const scoreElement = document.getElementById('overallScore');
+        if (!scoreElement) {
+            console.error('overallScore element not found');
+            return;
+        }
         // Clear any existing content
         scoreElement.innerHTML = '';
 
@@ -479,7 +487,12 @@ class SecurityChecker {
         gradeBadge.textContent = grade;
         scoreElement.appendChild(gradeBadge);
 
-        document.getElementById('scoreDescription').textContent = description;
+        const scoreDescriptionElement = document.getElementById('scoreDescription');
+        if (scoreDescriptionElement) {
+            scoreDescriptionElement.textContent = description;
+        } else {
+            console.error('scoreDescription element not found');
+        }
 
         // Grade boundaries will be added from displayResults after DOM is stable
     }
