@@ -103,6 +103,7 @@ public
 # VS Code settings that shouldn't be shared
 .vscode/settings.json
 .vscode/launch.json
+.vscode/mcp.json
 
 # MacOS
 .DS_Store
