@@ -18,6 +18,7 @@ const securityHeaders = require('./lib/security-headers/index.js');
 const webSecurity = require('./lib/web-security/index.js');
 const { generateSecurityAssessment } = require('./lib/scoring-system');
 const { checkReachabilityWithRetry, getReachabilitySuggestions } = require('./lib/reachability-checker');
+const { generatePDFReport } = require('./lib/pdf-generator');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,7 +28,8 @@ app.use(helmet({
     contentSecurityPolicy: false // Disable for demo purposes
 }));
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increase limit for large analysis data
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static('.'));
 
 // Serve main page
@@ -302,12 +304,48 @@ app.get('/api-docs', (req, res) => {
     });
 });
 
+// PDF Generation endpoint
+app.post('/api/generate-pdf', async (req, res) => {
+    try {
+        const { analysisResults, filename } = req.body;
+        
+        if (!analysisResults) {
+            return res.status(400).json({ 
+                error: 'Analysis results are required for PDF generation' 
+            });
+        }
+        
+        logger.info(`📄 Generating PDF report for: ${analysisResults.url || 'Unknown URL'}`);
+        
+        // Generate PDF using Puppeteer
+        const pdfBuffer = await generatePDFReport(analysisResults, filename);
+        
+        // Set headers for PDF download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename || 'security-report'}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        // Send PDF binary data directly
+        res.end(pdfBuffer, 'binary');
+        
+        logger.info(`✅ PDF generated successfully (${pdfBuffer.length} bytes)`);
+        
+    } catch (error) {
+        logger.error('❌ PDF generation failed:', error);
+        res.status(500).json({ 
+            error: 'Failed to generate PDF report',
+            details: error.message 
+        });
+    }
+});
+
 // Handle 404 for API routes
 app.use('/api/*', (req, res) => {
     res.status(404).json({
         error: 'API endpoint not found',
         availableEndpoints: [
             'POST /api/analyze',
+            'POST /api/generate-pdf',
             'GET /api/health',
             'GET /api-docs'
         ]

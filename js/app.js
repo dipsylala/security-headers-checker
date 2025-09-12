@@ -1258,209 +1258,56 @@ function exportReport(format) {
 }
 
 function exportToPDF(results, filename) {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    let yPos = 20;
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 20;
-    const lineHeight = 10;
-
-    // Helper function to add new page if needed
-    function checkNewPage(neededSpace = 20) {
-        if (yPos + neededSpace > pageHeight - margin) {
-            doc.addPage();
-            yPos = 20;
+    // Show loading indicator
+    const exportBtn = document.querySelector('button[onclick*="exportToPDF"]');
+    const originalText = exportBtn ? exportBtn.textContent : '';
+    if (exportBtn) {
+        exportBtn.textContent = 'Generating PDF...';
+        exportBtn.disabled = true;
+    }
+    
+    // Use server-side PDF generation with Puppeteer
+    fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            analysisResults: results,
+            filename: filename
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-    }
-
-    // Helper function to add text with proper wrapping
-    function addText(text, fontSize = 10, isBold = false) {
-        checkNewPage();
-        doc.setFontSize(fontSize);
-        if (isBold) {
-            doc.setFont(undefined, 'bold');
-        } else {
-            doc.setFont(undefined, 'normal');
+        return response.blob();
+    })
+    .then(blob => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `${filename}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        console.log('✅ PDF downloaded successfully');
+    })
+    .catch(error => {
+        console.error('❌ PDF generation failed:', error);
+        alert('Failed to generate PDF. Please try again or check the console for details.');
+    })
+    .finally(() => {
+        // Restore button state
+        if (exportBtn) {
+            exportBtn.textContent = originalText;
+            exportBtn.disabled = false;
         }
-        doc.text(text, margin, yPos);
-        yPos += lineHeight;
-    }
-
-    // Helper function to add section header
-    function addSectionHeader(title) {
-        checkNewPage(30);
-        yPos += 5; // Extra space before section
-        doc.setFontSize(16);
-        doc.setFont(undefined, 'bold');
-        doc.text(title, margin, yPos);
-        yPos += lineHeight + 5; // Extra space after header
-    }
-
-    // Title
-    doc.setFontSize(24);
-    doc.setFont(undefined, 'bold');
-    doc.text('Security Headers Analysis Report', margin, yPos);
-    yPos += 20;
-
-    // Summary Information
-    addSectionHeader('Summary');
-    addText(`URL: ${results.url}`, 12);
-    addText(`Domain: ${results.domain || 'N/A'}`, 12);
-    addText(`Generated: ${new Date(results.timestamp).toLocaleString()}`, 12);
-    addText(`Overall Security Score: ${results.score}/100`, 14, true);
-
-    // Grade explanation
-    let gradeDesc = '';
-    if (results.score >= 90) { gradeDesc = 'Excellent security posture!'; } else if (results.score >= 80) { gradeDesc = 'Very good security implementation'; } else if (results.score >= 70) { gradeDesc = 'Good security with minor improvements needed'; } else if (results.score >= 60) { gradeDesc = 'Adequate security but needs attention'; } else if (results.score >= 40) { gradeDesc = 'Poor security - immediate attention needed'; } else { gradeDesc = 'Critical security issues detected!'; }
-
-    addText(`Assessment: ${gradeDesc}`, 12);
-
-    // SSL Certificate Information
-    addSectionHeader('SSL/TLS Certificate Analysis');
-    addText(`Certificate Status: ${results.ssl.valid ? 'Valid' : 'Invalid'}`, 12, true);
-    addText(`SSL Grade: ${results.ssl.grade || 'N/A'}`, 12);
-    addText(`Issuer: ${results.ssl.issuer || 'Unknown'}`, 10);
-    addText(`Subject: ${results.ssl.subject || 'Unknown'}`, 10);
-
-    if (results.ssl.validFrom) {
-        addText(`Valid From: ${new Date(results.ssl.validFrom).toLocaleDateString()}`, 10);
-    }
-    if (results.ssl.validTo) {
-        addText(`Valid To: ${new Date(results.ssl.validTo).toLocaleDateString()}`, 10);
-    }
-
-    addText(`Key Length: ${results.ssl.keyLength || 'Unknown'} bits`, 10);
-    addText(`Protocol: ${results.ssl.protocol || 'Unknown'}`, 10);
-    addText(`Signature Algorithm: ${results.ssl.signatureAlgorithm || 'Unknown'}`, 10);
-
-    if (results.ssl.error) {
-        addText(`Error: ${results.ssl.error}`, 10);
-    }
-
-    // Detailed SSL Tests (if available)
-    if (results.detailedSsl && results.detailedSsl.tests) {
-        addSectionHeader('SSL Certificate Tests');
-        results.detailedSsl.tests.forEach(test => {
-            addText(`${test.name}: ${test.status.toUpperCase()}`, 11, true);
-            if (test.description) {
-                const wrappedDesc = doc.splitTextToSize(test.description, 170);
-                wrappedDesc.forEach(line => addText(line, 9));
-            }
-            if (test.recommendation) {
-                addText(`Recommendation: ${test.recommendation}`, 9);
-            }
-            yPos += 3; // Space between tests
-        });
-    }
-
-    // Security Headers
-    addSectionHeader('Security Headers Analysis');
-
-    if (results.headers && results.headers.length > 0) {
-        // Group headers by category if available
-        const categories = ['critical', 'important', 'modern', 'additional', 'legacy', 'deprecated', 'information'];
-        const categorizedHeaders = {};
-
-        // Group headers
-        results.headers.forEach(header => {
-            const category = header.category || 'other';
-            if (!categorizedHeaders[category]) {
-                categorizedHeaders[category] = [];
-            }
-            categorizedHeaders[category].push(header);
-        });
-
-        // Display headers by category
-        categories.forEach(category => {
-            if (categorizedHeaders[category] && categorizedHeaders[category].length > 0) {
-                const categoryTitle = `${category.charAt(0).toUpperCase() + category.slice(1) } Headers`;
-                addText(categoryTitle, 14, true);
-
-                categorizedHeaders[category].forEach(header => {
-                    const status = header.present ? 'Present' : 'Missing';
-                    const statusColor = header.present ? '✓' : '✗';
-                    addText(`${statusColor} ${header.name}: ${status}`, 11);
-
-                    if (header.present && header.value) {
-                        const wrappedValue = doc.splitTextToSize(`Value: ${header.value}`, 160);
-                        wrappedValue.forEach(line => addText(`   ${line}`, 9));
-                    }
-
-                    if (header.description) {
-                        const wrappedDesc = doc.splitTextToSize(`   ${header.description}`, 160);
-                        wrappedDesc.forEach(line => addText(line, 9));
-                    }
-                    yPos += 2;
-                });
-                yPos += 5;
-            }
-        });
-
-        // Handle ungrouped headers
-        if (categorizedHeaders.other) {
-            addText('Other Headers', 14, true);
-            categorizedHeaders.other.forEach(header => {
-                const status = header.present ? 'Present' : 'Missing';
-                const statusColor = header.present ? '✓' : '✗';
-                addText(`${statusColor} ${header.name}: ${status}`, 11);
-                yPos += 2;
-            });
-        }
-    }
-
-    // Web Security Checks
-    if (results.additional && results.additional.length > 0) {
-        addSectionHeader('Web Security Checks');
-
-        results.additional.forEach(check => {
-            let statusIcon = '';
-            switch (check.status) {
-                case 'pass': statusIcon = '✓'; break;
-                case 'fail': statusIcon = '✗'; break;
-                case 'warning': statusIcon = '⚠'; break;
-                default: statusIcon = 'ℹ';
-            }
-
-            addText(`${statusIcon} ${check.name}: ${check.status.toUpperCase()}`, 11, true);
-
-            if (check.description) {
-                const wrappedDesc = doc.splitTextToSize(`   ${check.description}`, 160);
-                wrappedDesc.forEach(line => addText(line, 9));
-            }
-
-            if (check.details) {
-                const wrappedDetails = doc.splitTextToSize(`   Details: ${check.details}`, 160);
-                wrappedDetails.forEach(line => addText(line, 9));
-            }
-            yPos += 3;
-        });
-    }
-
-    // Certificate Chain (if available)
-    if (results.detailedSsl && results.detailedSsl.certificateDetails && results.detailedSsl.certificateDetails.chain) {
-        addSectionHeader('Certificate Chain');
-
-        results.detailedSsl.certificateDetails.chain.forEach((cert, index) => {
-            addText(`Certificate ${index + 1}: ${cert.type || 'Unknown Type'}`, 12, true);
-            addText(`   Subject: ${cert.subject || 'Unknown'}`, 10);
-            addText(`   Issuer: ${cert.issuer || 'Unknown'}`, 10);
-            addText(`   Valid: ${cert.validity?.status || 'Unknown'}`, 10);
-            if (cert.validFrom && cert.validTo) {
-                addText(`   Validity Period: ${cert.validFrom} to ${cert.validTo}`, 10);
-            }
-            yPos += 3;
-        });
-    }
-
-    // Footer
-    checkNewPage(30);
-    yPos = pageHeight - 30;
-    doc.setFontSize(8);
-    doc.setFont(undefined, 'normal');
-    doc.text('Generated by WebCheck Validator', margin, yPos);
-    doc.text(`Report generated on ${new Date().toLocaleString()}`, margin, yPos + 10);
-
-    doc.save(`${filename}.pdf`);
+    });
 }
 
 function exportToExcel(results, filename) {
