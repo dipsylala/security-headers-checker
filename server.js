@@ -138,7 +138,9 @@ app.post('/api/analyze', async (req, res) => {
                 maxScore: sslResult.value.score?.maxScore || 100,
                 grade: sslResult.value.score?.grade || sslResult.value.basic?.grade || 'F',
                 // Ensure recommendations are prominently included
-                recommendations: sslResult.value.basic?.recommendations || []
+                recommendations: sslResult.value.basic?.recommendations || [],
+                // Include cipher suite information from combined results
+                cipherSuites: sslResult.value.combined?.cipherSuites || null
             } : {
                 error: sslResult.reason?.message || 'SSL analysis failed',
                 grade: 'F',
@@ -170,7 +172,9 @@ app.post('/api/analyze', async (req, res) => {
                 },
                 combinedResults: sslResult.value.combined,
                 sslyzeResults: sslResult.value.sslyze,
-                analysisTime: sslResult.value.duration
+                analysisTime: sslResult.value.duration,
+                // Include cipher suite information for frontend
+                cipherSuites: sslResult.value.combined?.cipherSuites || null
             } : null,
             headers: headersResult.status === 'fulfilled' ? headersResult.value : {
                 error: headersResult.reason?.message || 'Headers check failed',

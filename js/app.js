@@ -643,6 +643,7 @@ class SecurityChecker {
                 </div>
 
                 ${this.displayCertificateChain(certificateDetails)}
+                ${this.displayCipherSuites(detailedSsl)}
             </div>
 
             <div class="ssl-tests">
@@ -1222,6 +1223,301 @@ class SecurityChecker {
         } catch (_) {
             return dateString;
         }
+    }
+
+    displayCipherSuites(detailedSsl) {
+        // Check if cipher suite information is available
+        if (!detailedSsl.cipherSuites && !detailedSsl.sslyze?.tests) {
+            return '';
+        }
+
+        let html = `
+            <div class="cipher-suites-section mt-4">
+                <h6 class="mb-3">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Cipher Suites & Protocol Support
+                </h6>
+        `;
+
+        // Display cipher suite analysis if available
+        if (detailedSsl.cipherSuites && detailedSsl.cipherSuites.analysis) {
+            const analysis = detailedSsl.cipherSuites.analysis;
+            
+            html += `
+                <div class="cipher-summary mb-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="cipher-stat">
+                                <strong>Security Level:</strong>
+                                <span class="badge bg-${this.getCipherSecurityClass(analysis.overallSecurity)}">${analysis.overallSecurity}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="cipher-stat">
+                                <strong>Perfect Forward Secrecy:</strong>
+                                <span class="${analysis.hasForwardSecrecy ? 'text-success' : 'text-warning'}">
+                                    ${analysis.hasForwardSecrecy ? '✅ Supported' : '⚠️ Limited'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (analysis.recommendations && analysis.recommendations.length > 0) {
+                html += `
+                    <div class="cipher-recommendations mb-3">
+                        <h6 class="text-warning mb-2">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Cipher Suite Recommendations
+                        </h6>
+                        <ul class="list-unstyled">
+                `;
+                
+                analysis.recommendations.forEach(rec => {
+                    html += `<li class="small text-muted mb-1">• ${rec.action || rec}</li>`;
+                });
+                
+                html += `
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+
+        // Display protocol support if available
+        if (detailedSsl.cipherSuites && detailedSsl.cipherSuites.details) {
+            const details = detailedSsl.cipherSuites.details;
+            
+            html += `
+                <div class="protocol-support">
+                    <h6 class="mb-2">Protocol Support</h6>
+                    <div class="row">
+            `;
+            
+            const protocols = [
+                { name: 'TLS 1.3', key: 'tls1_3Support', recommended: true },
+                { name: 'TLS 1.2', key: 'tls1_2Support', recommended: true },
+                { name: 'TLS 1.1', key: 'tls1_1Support', recommended: false },
+                { name: 'TLS 1.0', key: 'tls1_0Support', recommended: false }
+            ];
+            
+            protocols.forEach(protocol => {
+                const support = details[protocol.key];
+                // Check for protocol support by presence of cipher suites
+                const isSupported = support && (
+                    (support.cipherSuites && support.cipherSuites.length > 0) ||
+                    (support.cipherSuiteDetails && support.cipherSuiteDetails.length > 0) ||
+                    support.supported === true
+                );
+                const statusClass = isSupported ? 
+                    (protocol.recommended ? 'text-success' : 'text-warning') : 
+                    'text-muted';
+                const icon = isSupported ? '✅' : '❌';
+                
+                html += `
+                    <div class="col-md-3">
+                        <div class="protocol-item">
+                            <span class="${statusClass}">${icon} ${protocol.name}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+
+        // Display detailed cipher suite breakdown if available
+        if (detailedSsl.cipherSuites && detailedSsl.cipherSuites.details) {
+            html += this.displayDetailedCipherSuites(detailedSsl.cipherSuites.details);
+        }
+
+        html += `
+            </div>
+        `;
+
+        return html;
+    }
+
+    getCipherSecurityClass(security) {
+        switch (security?.toLowerCase()) {
+            case 'excellent':
+            case 'high':
+                return 'success';
+            case 'good':
+            case 'medium':
+                return 'info';
+            case 'weak':
+            case 'low':
+                return 'warning';
+            case 'insecure':
+            case 'critical':
+                return 'danger';
+            default:
+                return 'secondary';
+        }
+    }
+
+    displayDetailedCipherSuites(cipherDetails) {
+        let html = `
+            <div class="detailed-cipher-suites mt-4">
+                <h6 class="mb-3">
+                    <i class="fas fa-list me-2"></i>
+                    Detailed Cipher Suite Analysis
+                </h6>
+        `;
+
+        // Process each TLS version
+        const protocols = [
+            { name: 'TLS 1.3', key: 'tls1_3Support', modern: true },
+            { name: 'TLS 1.2', key: 'tls1_2Support', modern: true },
+            { name: 'TLS 1.1', key: 'tls1_1Support', modern: false },
+            { name: 'TLS 1.0', key: 'tls1_0Support', modern: false }
+        ];
+
+        protocols.forEach(protocol => {
+            const support = cipherDetails[protocol.key];
+            if (support && support.cipherSuiteDetails && support.cipherSuiteDetails.length > 0) {
+                const secureCount = support.cipherSuiteDetails.filter(c => c.securityLevel === 'secure').length;
+                const weakCount = support.cipherSuiteDetails.filter(c => c.securityLevel === 'weak').length;
+                const insecureCount = support.cipherSuiteDetails.filter(c => c.securityLevel === 'insecure').length;
+                
+                html += `
+                    <div class="protocol-cipher-section mb-4">
+                        <h6 class="protocol-header ${protocol.modern ? 'text-success' : 'text-warning'}">
+                            ${protocol.name} Cipher Suites (${support.cipherSuiteDetails.length} total)
+                            <small class="ms-2">
+                                <span class="badge bg-success">${secureCount} secure</span>
+                                <span class="badge bg-warning">${weakCount} weak</span>
+                                ${insecureCount > 0 ? `<span class="badge bg-danger">${insecureCount} insecure</span>` : ''}
+                            </small>
+                        </h6>
+                        
+                        <div class="cipher-grid">
+                `;
+
+                // Group cipher suites by security level
+                const groupedCiphers = {
+                    secure: support.cipherSuiteDetails.filter(c => c.securityLevel === 'secure'),
+                    weak: support.cipherSuiteDetails.filter(c => c.securityLevel === 'weak'),
+                    insecure: support.cipherSuiteDetails.filter(c => c.securityLevel === 'insecure')
+                };
+
+                Object.entries(groupedCiphers).forEach(([level, ciphers]) => {
+                    if (ciphers.length > 0) {
+                        const levelClass = level === 'secure' ? 'success' : level === 'weak' ? 'warning' : 'danger';
+                        const levelIcon = level === 'secure' ? '✅' : level === 'weak' ? '⚠️' : '❌';
+                        
+                        html += `
+                            <div class="cipher-security-group mb-3">
+                                <h6 class="text-${levelClass}">
+                                    ${levelIcon} ${level.charAt(0).toUpperCase() + level.slice(1)} Cipher Suites (${ciphers.length})
+                                </h6>
+                                <div class="cipher-list">
+                        `;
+
+                        ciphers.forEach(cipher => {
+                            const fsIcon = cipher.forwardSecrecy ? '🔒' : '🔓';
+                            const fsText = cipher.forwardSecrecy ? 'Forward Secrecy' : 'No Forward Secrecy';
+                            
+                            html += `
+                                <div class="cipher-item border border-${levelClass} rounded p-2 mb-2">
+                                    <div class="cipher-name fw-bold">${cipher.name}</div>
+                                    <div class="cipher-details small text-muted">
+                                        <span class="me-3">${cipher.keyExchange}/${cipher.authentication}</span>
+                                        <span class="me-3">${cipher.encryption?.algorithm || 'Unknown'}-${cipher.keySize}</span>
+                                        <span class="me-3">${cipher.mac}</span>
+                                        <span class="me-3">${fsIcon} ${fsText}</span>
+                                    </div>
+                                    ${cipher.vulnerabilities && cipher.vulnerabilities.length > 0 ? `
+                                        <div class="cipher-vulnerabilities mt-1">
+                                            <small class="text-danger">
+                                                ⚠️ ${cipher.vulnerabilities.join(', ')}
+                                            </small>
+                                        </div>
+                                    ` : ''}
+                                    ${cipher.recommendations && cipher.recommendations.length > 0 ? `
+                                        <div class="cipher-recommendations mt-1">
+                                            <small class="text-info">
+                                                💡 ${cipher.recommendations.join(', ')}
+                                            </small>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        });
+
+                        html += `
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // Add recommended cipher suites section
+        html += this.displayRecommendedCipherSuites();
+
+        html += `
+            </div>
+        `;
+
+        return html;
+    }
+
+    displayRecommendedCipherSuites() {
+        return `
+            <div class="recommended-ciphers mt-4">
+                <h6 class="text-success mb-3">
+                    <i class="fas fa-star me-2"></i>
+                    Recommended Modern Cipher Suites
+                </h6>
+                <div class="recommendation-text small text-muted mb-3">
+                    For optimal security, consider implementing these modern cipher suites:
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-success">TLS 1.3 (Recommended)</h6>
+                        <ul class="list-unstyled small">
+                            <li>✅ TLS_AES_256_GCM_SHA384</li>
+                            <li>✅ TLS_CHACHA20_POLY1305_SHA256</li>
+                            <li>✅ TLS_AES_128_GCM_SHA256</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-info">TLS 1.2 (Fallback)</h6>
+                        <ul class="list-unstyled small">
+                            <li>✅ ECDHE-ECDSA-AES256-GCM-SHA384</li>
+                            <li>✅ ECDHE-RSA-AES256-GCM-SHA384</li>
+                            <li>✅ ECDHE-ECDSA-CHACHA20-POLY1305</li>
+                            <li>✅ ECDHE-RSA-CHACHA20-POLY1305</li>
+                            <li>✅ ECDHE-ECDSA-AES128-GCM-SHA256</li>
+                            <li>✅ ECDHE-RSA-AES128-GCM-SHA256</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <h6 class="alert-heading">Security Best Practices:</h6>
+                    <ul class="mb-0 small">
+                        <li>🔒 <strong>Perfect Forward Secrecy:</strong> Use ECDHE or DHE key exchange</li>
+                        <li>🛡️ <strong>AEAD Ciphers:</strong> Prefer GCM or POLY1305 modes</li>
+                        <li>🚫 <strong>Disable Legacy:</strong> Remove support for TLS 1.0/1.1, CBC mode, and RC4</li>
+                        <li>📊 <strong>Modern Curves:</strong> Use X25519, P-256, or P-384 for ECDHE</li>
+                    </ul>
+                </div>
+            </div>
+        `;
     }
 }
 

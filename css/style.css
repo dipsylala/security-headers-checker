@@ -668,3 +668,110 @@ body {
         transform: scale(1);
     }
 }
+
+/* Detailed Cipher Suite Styles */
+.detailed-cipher-suites {
+    border-top: 1px solid #dee2e6;
+    padding-top: 1rem;
+}
+
+.protocol-cipher-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.protocol-header {
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 0.5rem;
+}
+
+.cipher-security-group {
+    margin-bottom: 1rem;
+}
+
+.cipher-list {
+    margin-left: 1rem;
+}
+
+.cipher-item {
+    background: white;
+    transition: all 0.2s ease-in-out;
+}
+
+.cipher-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.cipher-name {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+.cipher-details {
+    margin-top: 0.25rem;
+}
+
+.cipher-details span {
+    background: #e9ecef;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+}
+
+.cipher-vulnerabilities {
+    background: #f8d7da;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+}
+
+.cipher-recommendations {
+    background: #d1ecf1;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+}
+
+.recommended-ciphers {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #dee2e6;
+}
+
+.recommended-ciphers ul li {
+    padding: 0.2rem 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.recommended-ciphers .alert {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Badge styling improvements */
+.cipher-security-group .badge {
+    font-size: 0.7rem;
+    margin-right: 0.25rem;
+}
+
+/* Protocol section responsive design */
+@media (max-width: 768px) {
+    .cipher-list {
+        margin-left: 0.5rem;
+    }
+    
+    .cipher-details span {
+        display: block;
+        margin-bottom: 0.2rem;
+    }
+    
+    .recommended-ciphers .row > div {
+        margin-bottom: 1rem;
+    }
+}
