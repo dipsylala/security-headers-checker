@@ -325,6 +325,17 @@ body {
     margin-left: 0;
 }
 
+/* Score description styling */
+#scoreDescription {
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #495057;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e9ecef;
+}
+
 .score-excellent {
     background: linear-gradient(90deg, #28a745, #20c997);
     box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);

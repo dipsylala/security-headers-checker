@@ -990,6 +990,11 @@ class SecurityChecker {
         const additionalItems = additional.map(check => {
             const statusIcon = this.getStatusIcon(check.status);
             const statusBadge = this.getStatusBadge(check.status);
+            
+            // Format details to handle newlines properly
+            const formattedDetails = check.details 
+                ? check.details.split('\n').map(line => `<div>${this.escapeHtml(line)}</div>`).join('')
+                : '';
 
             return `
                 <div class="security-item ${check.status}">
@@ -1002,7 +1007,7 @@ class SecurityChecker {
                     </div>
                     
                     <p class="mb-2 text-muted">${check.description}</p>
-                    <div class="text-dark">${check.details}</div>
+                    <div class="text-dark">${formattedDetails}</div>
                 </div>
             `;
         }).join('');
