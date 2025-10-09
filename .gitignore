@@ -122,3 +122,8 @@ logs
 
 # Jetbrains
 .idea/
+
+# Veracode
+veracode-packaging/
+veracode-pipeline/
+veracode-consultation/
