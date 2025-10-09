@@ -67,6 +67,9 @@ jspm_packages/
 
 temp_tests/
 
+# UI Test Artifacts
+test/ui/artifacts/
+
 # parcel-bundler cache
 .cache
 .parcel-cache

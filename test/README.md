@@ -19,6 +19,14 @@ test/integration/
 └── performance.test.js        # ⚡ Performance and reliability tests (4 tests)
 ```
 
+### UI Tests (NEW)
+
+```
+test/ui/
+├── basic-ui.test.js          # 🖥️ Frontend UI tests with Puppeteer (5 tests)
+└── artifacts/                # 📸 Screenshot artifacts from test runs
+```
+
 ### Test Runner Scripts
 
 ```
@@ -54,7 +62,45 @@ npm run test:badssl          # Certificate error scenarios (6 tests)
 
 # Performance Testing
 npm run test:performance      # Performance and reliability (4 tests)
+
+# UI Testing (NEW)
+npm run test:ui              # Frontend UI tests with screenshots (5 tests)
 ```
+
+## UI Testing Features (NEW)
+
+The new UI test suite (`npm run test:ui`) provides end-to-end frontend testing:
+
+### 🖥️ What It Tests
+- Server availability and health
+- Application page loading
+- UI element presence (form, input, button)
+- Full analysis workflow (enter URL → analyze → results)
+- Results content verification
+
+### 📸 Screenshot Artifacts
+- **Automatic capture** at each test stage
+- **Saved to**: `test/ui/artifacts/`
+- **Naming**: Timestamped (e.g., `01_initial_load_2025-10-09T12-30-45-123Z.png`)
+- **Auto-cleanup**: Keeps only last 10 runs
+- **Full-page screenshots** for complete visibility
+
+### ✨ Test Stages with Screenshots
+1. **Initial Load** - Application homepage
+2. **UI Elements** - Form and input validation
+3. **URL Entered** - User input captured
+4. **Analysis Started** - Loading state
+5. **Analysis Complete** - Final results display
+6. **Error States** - Any failures captured
+
+### 🎯 Test Target
+- **Default URL**: `https://veracode.com`
+- **Timeout**: 60 seconds for analysis completion
+- **Browser**: Headless Chromium (Puppeteer)
+
+### ⚠️ Prerequisites
+- Server must be running (`npm start` or `npm run dev`)
+- Puppeteer installed (included in dependencies)
 
 ## Server Health Check Features
 

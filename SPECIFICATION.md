@@ -202,16 +202,19 @@ test/
 ├── test-runner.js              # Main test orchestrator
 ├── integration.test.js         # Legacy integration tests
 ├── README.md                   # Testing documentation
-└── integration/                # Comprehensive test suite
-    ├── run-all-tests.js        # Execute all integration tests
-    ├── ssl-certificate.test.js # SSL certificate validation tests
-    ├── comprehensive-ssl.test.js # Extended SSL analysis tests
-    ├── enhanced-ssl.test.js    # Advanced SSL features
-    ├── sslyze-analysis.test.js # SSLyze integration tests
-    ├── badssl-scenarios.test.js # Certificate error scenarios
-    ├── security-headers-analysis.test.js # Headers detection tests
-    ├── web-security.test.js    # Additional checks tests
-    └── performance.test.js     # Performance benchmarking
+├── integration/                # Backend/API integration tests
+│   ├── run-all-tests.js        # Execute all integration tests
+│   ├── ssl-certificate.test.js # SSL certificate validation tests
+│   ├── comprehensive-ssl.test.js # Extended SSL analysis tests
+│   ├── enhanced-ssl.test.js    # Advanced SSL features
+│   ├── sslyze-analysis.test.js # SSLyze integration tests
+│   ├── badssl-scenarios.test.js # Certificate error scenarios
+│   ├── security-headers-analysis.test.js # Headers detection tests
+│   ├── web-security.test.js    # Additional checks tests
+│   └── performance.test.js     # Performance benchmarking
+└── ui/                         # Frontend UI tests (NEW)
+    ├── basic-ui.test.js        # Puppeteer-based UI tests
+    └── artifacts/              # Screenshot artifacts (auto-generated)
 ```
 
 ### Build & Deployment
@@ -894,6 +897,52 @@ npm run test:performance
 - Analysis speed: <3 seconds per URL (fast mode)
 - Analysis speed: <15 seconds (comprehensive mode)
 - Memory usage: <100MB per analysis
+
+#### 5. UI Tests (NEW)
+```bash
+npm run test:ui
+```
+
+**What It Tests:**
+- Server availability and health checks
+- Application page loading and rendering
+- UI element presence validation (form, input field, submit button)
+- Complete user workflow: Enter URL → Click Analyze → View Results
+- Results content verification (grade, SSL analysis, headers, etc.)
+
+**Screenshot Artifacts:**
+- **Location:** `test/ui/artifacts/`
+- **Auto-captured** at each test stage:
+  1. `01_initial_load` - Homepage loaded
+  2. `02_ui_elements` - Form elements verified
+  3. `03_url_entered` - URL input captured
+  4. `04_analysis_started` - Loading state
+  5. `05_analysis_complete` - Results displayed
+  6. `06_final_results` - Complete analysis view
+  7. `error_screenshot` - Any failure states
+- **Format:** Full-page PNG screenshots
+- **Naming:** Timestamped (e.g., `01_initial_load_2025-10-09T12-30-45-123Z.png`)
+- **Cleanup:** Automatically keeps only last 10 test runs
+
+**Test Configuration:**
+- **Default Target:** `https://veracode.com`
+- **Browser:** Headless Chromium (Puppeteer v24.20.0)
+- **Viewport:** 1920x1080 (desktop resolution)
+- **Timeout:** 60 seconds for analysis completion
+- **Prerequisites:** Server must be running (`npm start` or `npm run dev`)
+
+**Test Stages:**
+1. **Server Health Check** - Verify server running on localhost:3000
+2. **Page Load** - Navigate to application homepage
+3. **Element Verification** - Validate form, input, button presence
+4. **User Interaction** - Enter URL and click analyze button
+5. **Results Verification** - Check for grade, SSL data, headers, summary
+
+**Use Cases:**
+- **Regression Testing** - Ensure UI changes don't break functionality
+- **Visual Verification** - Manual review of screenshots for layout issues
+- **CI/CD Integration** - Automated frontend testing in deployment pipelines
+- **Bug Reporting** - Screenshots provide visual evidence of issues
 
 ### Test Structure
 
