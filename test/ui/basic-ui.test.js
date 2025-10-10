@@ -55,7 +55,7 @@ function cleanOldArtifacts() {
  */
 async function saveScreenshot(page, name) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `${name}_${timestamp}.png`;
+    const filename = `${timestamp}_${name}.png`;
     const filepath = path.join(ARTIFACTS_DIR, filename);
     
     await page.screenshot({ 
