@@ -4,7 +4,7 @@ const path = require('path');
 const BUILD_DIR = 'build';
 const SOURCE_FILES = [
     'server.js',
-    'package.json',
+//    'package.json',
     'index.html',
     'css/',
     'js/',
@@ -61,6 +61,8 @@ async function build() {
         }
         console.log('✅ Application files copied\n');
 
+        console.log('📦 No longer creating production package.json...');
+/*
         // Create production package.json
         console.log('📦 Creating production package.json...');
         const packageJson = await fs.readJson(path.join(__dirname, '..', 'package.json'));
@@ -102,7 +104,7 @@ async function build() {
             });
         });
         console.log('✅ Production dependencies installed\n');
-
+*/
         // Create startup script
         console.log('🚀 Creating startup scripts...');
 
@@ -110,7 +112,7 @@ async function build() {
         const startBat = `@echo off
 echo Starting WebCheck Validator...
 echo.
-echo The application will be available at: http://localhost:3000
+echo The application will be available at: http://localhost:4000
 echo Press Ctrl+C to stop the server
 echo.
 node server.js
@@ -121,7 +123,7 @@ node server.js
         const startSh = `#!/bin/bash
 echo "Starting WebCheck Validator..."
 echo ""
-echo "The application will be available at: http://localhost:3000"
+echo "The application will be available at: http://localhost:4000"
 echo "Press Ctrl+C to stop the server"
 echo ""
 node server.js
@@ -162,11 +164,11 @@ npm start
 1. Upload this entire folder to your server
 2. Ensure Node.js 14+ is installed
 3. Run the application using one of the methods above
-4. Access the application at http://localhost:3000
+4. Access the application at http://localhost:4000
 
 ## Environment Variables
 
-- \`PORT\`: Server port (default: 3000)
+- \`PORT\`: Server port (default: 4000)
 
 ## Files Included
 

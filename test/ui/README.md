@@ -42,7 +42,7 @@ Complete end-to-end UI test that:
 ## Test Configuration
 
 - **Target URL:** `https://veracode.com` (configurable in test file)
-- **Base URL:** `http://localhost:3000` (application must be running)
+- **Base URL:** `http://localhost:4000` (application must be running)
 - **Browser:** Headless Chromium via Puppeteer
 - **Viewport:** 1920x1080 (desktop resolution)
 - **Timeout:** 60 seconds for analysis completion
@@ -77,7 +77,7 @@ error_screenshot_2025-10-09T12-31-20-901Z.png (on failure)
 ======================================================================
 🖥️  WebCheck Validator - UI Test Suite
 ======================================================================
-📍 Base URL: http://localhost:3000
+📍 Base URL: http://localhost:4000
 🎯 Test Target: https://veracode.com
 📁 Artifacts: C:\...\test\ui\artifacts
 ======================================================================
@@ -89,7 +89,7 @@ error_screenshot_2025-10-09T12-31-20-901Z.png (on failure)
 📋 Test 2: Load Application UI
 ----------------------------------------------------------------------
 🚀 Launching headless browser...
-📡 Navigating to http://localhost:3000...
+📡 Navigating to http://localhost:4000...
 ✅ Application loaded successfully
 📸 Screenshot saved: 01_initial_load_2025-10-09T12-30-45-123Z.png
 

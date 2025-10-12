@@ -20,7 +20,7 @@ Write-Host ""
 Write-Host "Dependencies installed successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Starting WebCheck Validator..." -ForegroundColor Yellow
-Write-Host "The application will be available at http://localhost:3000" -ForegroundColor Cyan
+Write-Host "The application will be available at http://localhost:4000" -ForegroundColor Cyan
 Write-Host ""
 
 npm start

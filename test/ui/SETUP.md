@@ -74,7 +74,7 @@ The test automatically captures screenshots at each stage:
 | Setting | Value |
 |---------|-------|
 | **Target URL** | `https://veracode.com` |
-| **Base URL** | `http://localhost:3000` |
+| **Base URL** | `http://localhost:4000` |
 | **Browser** | Headless Chromium (Puppeteer) |
 | **Viewport** | 1920x1080 |
 | **Timeout** | 60 seconds |
@@ -86,7 +86,7 @@ The test automatically captures screenshots at each stage:
 ======================================================================
 🖥️  WebCheck Validator - UI Test Suite
 ======================================================================
-📍 Base URL: http://localhost:3000
+📍 Base URL: http://localhost:4000
 🎯 Test Target: https://veracode.com
 📁 Artifacts: test/ui/artifacts
 ======================================================================

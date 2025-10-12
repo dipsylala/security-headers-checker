@@ -37,7 +37,7 @@ function performComprehensiveSSLAnalysis(url) {
 
         const options = {
             hostname: 'localhost',
-            port: 3000,
+            port: 4000,
             path: '/api/analyze',
             method: 'POST',
             headers: {
@@ -240,7 +240,7 @@ async function testMainEndpointComprehensiveSSL() {
 
         const options = {
             hostname: 'localhost',
-            port: 3000,
+            port: 4000,
             path: '/api/analyze',
             method: 'POST',
             headers: {

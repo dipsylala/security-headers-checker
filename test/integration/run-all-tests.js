@@ -21,7 +21,7 @@ function checkServerHealth() {
     return new Promise((resolve) => {
         const options = {
             hostname: 'localhost',
-            port: 3000,
+            port: 4000,
             path: '/health',
             method: 'GET',
             timeout: 5000 // 5 second timeout
@@ -55,7 +55,7 @@ function checkServerAPI() {
         // Use health endpoint first as it's faster and more reliable
         const options = {
             hostname: 'localhost',
-            port: 3000,
+            port: 4000,
             path: '/api/health',
             method: 'GET',
             timeout: 5000 // 5 second timeout for health check
@@ -109,13 +109,13 @@ async function runAllIntegrationTests() {
     const serverRunning = await checkServerHealth();
 
     if (!serverRunning) {
-        console.error('❌ Server is not running on localhost:3000');
+        console.error('❌ Server is not running on localhost:4000');
         console.error('💡 Please start the server with: npm start or npm run dev');
         console.error('🛑 Integration tests require the server to be running\n');
         process.exit(1);
     }
 
-    console.log('✅ Server is running on localhost:3000');
+    console.log('✅ Server is running on localhost:4000');
 
     // API Health Check
     console.log('🔍 Checking API health...');

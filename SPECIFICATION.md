@@ -543,7 +543,7 @@ const logger = winston.createLogger({
 
 ### Base URL
 ```
-http://localhost:3000
+http://localhost:4000
 ```
 
 ### Endpoints
@@ -932,7 +932,7 @@ npm run test:ui
 - **Prerequisites:** Server must be running (`npm start` or `npm run dev`)
 
 **Test Stages:**
-1. **Server Health Check** - Verify server running on localhost:3000
+1. **Server Health Check** - Verify server running on localhost:4000
 2. **Page Load** - Navigate to application homepage
 3. **Element Verification** - Validate form, input, button presence
 4. **User Interaction** - Enter URL and click analyze button
@@ -992,7 +992,7 @@ npm install
 npm run dev
 
 # Access application
-http://localhost:3000
+http://localhost:4000
 ```
 
 ### VS Code Tasks
@@ -1198,7 +1198,7 @@ build/
 ### Environment Variables
 ```bash
 # Server configuration
-PORT=3000
+PORT=4000
 LOG_LEVEL=info
 
 # Performance tuning
@@ -1237,14 +1237,14 @@ FROM node:18-alpine
 WORKDIR /app
 COPY build/ .
 RUN npm install --production
-EXPOSE 3000
+EXPOSE 4000
 CMD ["node", "server.js"]
 ```
 
 ### Health Monitoring
 ```bash
 # Check server health
-curl http://localhost:3000/api/health
+curl http://localhost:4000/api/health
 
 # Expected response
 {
@@ -1372,13 +1372,13 @@ rm -rf node_modules package-lock.json
 npm install
 ```
 
-#### 2. "Port 3000 already in use"
+#### 2. "Port 4000 already in use"
 ```bash
 # Windows
 taskkill /F /IM node.exe
 
 # Linux/Mac
-lsof -ti:3000 | xargs kill -9
+lsof -ti:4000 | xargs kill -9
 
 # Or change port
 PORT=3001 npm start
