@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Configuration
-const BASE_URL = 'http://localhost:4000;
+const BASE_URL = 'http://localhost:4000' ;
 const TEST_URL = 'https://veracode.com';
 const ARTIFACTS_DIR = path.join(__dirname, 'artifacts');
 const TIMEOUT = 60000; // 60 seconds for analysis to complete
