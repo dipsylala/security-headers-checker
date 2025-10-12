@@ -25,7 +25,7 @@ This is a comprehensive web security analysis tool that evaluates websites for:
 - **Async/Await**: Use modern async patterns for all network operations
 - **Error Handling**: Comprehensive try/catch with detailed error messages
 - **Logging**: Include timestamp and analysis duration for debugging
-- **Comments**: JSDoc format for all functions with parameter types
+- **Comments**: JSDoc format for all functions with parameter types. Do not include comments where the intention is obvious
 
 ### Testing Standards
 - **Integration Focus**: Test real websites and certificate scenarios
@@ -44,6 +44,10 @@ This is a comprehensive web security analysis tool that evaluates websites for:
 ### Test Files
 - **Integration tests**: Place in `./test/integration/`
 - **Temporary tests**: Place in `./temp_tests/` (for ad-hoc verification)
+
+### Build Files
+- **Builds**: the builds are placed in `./build/`. If the build is not representative of changes made in the code, rebuild the code with npm
+
 
 ### New Features
 - **Analysis modules**: Add to `./lib/` with comprehensive JSDoc
