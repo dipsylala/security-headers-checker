@@ -7,12 +7,17 @@ const puppeteer = require('puppeteer');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 
 // Configuration
-const BASE_URL = 'http://localhost:4000' ;
+let BASE_URL = 'http://localhost:4000';
 const TEST_URL = 'https://veracode.com';
 const ARTIFACTS_DIR = path.join(__dirname, 'artifacts');
 const TIMEOUT = 60000; // 60 seconds for analysis to complete
+
+// Server process management
+let serverProcess = null;
+let serverPort = null;
 
 /**
  * Ensure artifacts directory exists
@@ -48,6 +53,106 @@ function cleanOldArtifacts() {
     } catch (error) {
         console.warn(`⚠️  Warning: Could not clean old artifacts: ${error.message}`);
     }
+}
+
+/**
+ * Find an available port
+ */
+function findAvailablePort() {
+    return new Promise((resolve, reject) => {
+        const server = require('net').createServer();
+        server.listen(0, () => {
+            const port = server.address().port;
+            server.close(() => resolve(port));
+        });
+        server.on('error', reject);
+    });
+}
+
+/**
+ * Start the application server on a random port
+ */
+async function startServer() {
+    serverPort = await findAvailablePort();
+    BASE_URL = `http://localhost:${serverPort}`;
+    
+    return new Promise((resolve, reject) => {
+        console.log(`🚀 Starting server on port ${serverPort}...`);
+        
+        const serverPath = path.join(__dirname, '..', '..', 'server.js');
+        serverProcess = spawn('node', [serverPath], {
+            env: { ...process.env, PORT: serverPort.toString() },
+            cwd: path.join(__dirname, '..', '..'),
+            stdio: ['ignore', 'pipe', 'pipe']
+        });
+
+        let startupOutput = '';
+        const timeout = setTimeout(() => {
+            reject(new Error('Server startup timeout'));
+        }, 15000);
+
+        serverProcess.stdout.on('data', (data) => {
+            startupOutput += data.toString();
+            if (startupOutput.includes('WebCheck Validator running')) {
+                clearTimeout(timeout);
+                console.log(`✅ Server started on port ${serverPort}`);
+                // Give it a moment to fully initialize
+                setTimeout(() => resolve(serverPort), 1000);
+            }
+        });
+
+        serverProcess.stderr.on('data', (data) => {
+            console.error(`Server stderr: ${data}`);
+        });
+
+        serverProcess.on('error', (error) => {
+            clearTimeout(timeout);
+            reject(new Error(`Failed to start server: ${error.message}`));
+        });
+
+        serverProcess.on('exit', (code) => {
+            if (code !== 0 && code !== null) {
+                clearTimeout(timeout);
+                reject(new Error(`Server exited with code ${code}`));
+            }
+        });
+    });
+}
+
+/**
+ * Stop the application server
+ */
+function stopServer() {
+    return new Promise((resolve) => {
+        if (!serverProcess) {
+            resolve();
+            return;
+        }
+
+        console.log('🛑 Stopping server...');
+        
+        serverProcess.on('exit', () => {
+            console.log('✅ Server stopped');
+            serverProcess = null;
+            resolve();
+        });
+
+        // Kill the process
+        if (process.platform === 'win32') {
+            spawn('taskkill', ['/pid', serverProcess.pid.toString(), '/f', '/t']);
+        } else {
+            serverProcess.kill('SIGTERM');
+        }
+
+        // Force kill after 5 seconds if still running
+        setTimeout(() => {
+            if (serverProcess) {
+                serverProcess.kill('SIGKILL');
+                serverProcess = null;
+                resolve();
+            }
+        }, 5000);
+    });
 }
 
 /**
@@ -111,7 +216,6 @@ async function runUITest() {
     console.log('\n' + '='.repeat(70));
     console.log('🖥️  WebCheck Validator - UI Test Suite');
     console.log('='.repeat(70));
-    console.log(`📍 Base URL: ${BASE_URL}`);
     console.log(`🎯 Test Target: ${TEST_URL}`);
     console.log(`📁 Artifacts: ${ARTIFACTS_DIR}`);
     console.log('='.repeat(70));
@@ -126,6 +230,19 @@ async function runUITest() {
     const startTime = Date.now();
 
     try {
+        // Test 0: Start server on random port
+        console.log('\n📋 Test 0: Start Test Server');
+        console.log('-'.repeat(70));
+        try {
+            await startServer();
+            console.log(`✅ Server started successfully on ${BASE_URL}`);
+            testsPassed++;
+        } catch (error) {
+            console.error('❌ Failed to start server:', error.message);
+            testsFailed++;
+            throw new Error('Cannot start server - cannot proceed with UI tests');
+        }
+
         // Test 1: Check server health
         console.log('\n📋 Test 1: Server Health Check');
         console.log('-'.repeat(70));
@@ -135,9 +252,8 @@ async function runUITest() {
             testsPassed++;
         } catch (error) {
             console.error('❌ Server health check failed:', error.message);
-            console.error('💡 Make sure to start the server first: npm start');
             testsFailed++;
-            throw new Error('Server not available - cannot proceed with UI tests');
+            throw new Error('Server not healthy - cannot proceed with UI tests');
         }
 
         // Test 2: Launch browser and load page
@@ -363,6 +479,59 @@ async function runUITest() {
             testsFailed++;
         }
 
+        // Test 6: Verify HTTPS Redirect location is displayed
+        console.log('\n📋 Test 6: Verify HTTPS Redirect Location');
+        console.log('-'.repeat(70));
+
+        try {
+            // Look for the HTTPS Redirect check in the Additional Security section
+            const redirectInfo = await page.evaluate(() => {
+                const additionalSection = document.getElementById('additionalResults');
+                if (!additionalSection) return null;
+                
+                const items = additionalSection.querySelectorAll('.security-item');
+                for (const item of items) {
+                    const heading = item.querySelector('h6');
+                    if (heading && heading.textContent.includes('HTTPS Redirect')) {
+                        // Look for <code> element containing the redirect location
+                        const codeElement = heading.querySelector('code');
+                        return {
+                            fullText: heading.textContent.trim(),
+                            redirectLocation: codeElement ? codeElement.textContent.trim() : null
+                        };
+                    }
+                }
+                return null;
+            });
+
+            if (redirectInfo) {
+                if (redirectInfo.redirectLocation) {
+                    // Verify the redirect location contains expected URL
+                    if (redirectInfo.redirectLocation.includes('www.veracode.com')) {
+                        console.log(`✅ HTTPS Redirect location is displayed correctly`);
+                        console.log(`   Redirect to: ${redirectInfo.redirectLocation}`);
+                        testsPassed++;
+                    } else {
+                        console.log(`⚠️  HTTPS Redirect location found but unexpected URL`);
+                        console.log(`   Found: ${redirectInfo.redirectLocation}`);
+                        console.log(`   Expected: URL containing www.veracode.com`);
+                        testsFailed++;
+                    }
+                } else {
+                    console.log(`⚠️  HTTPS Redirect found but location not displayed in code tag`);
+                    console.log(`   Full text: ${redirectInfo.fullText.substring(0, 150)}`);
+                    testsFailed++;
+                }
+            } else {
+                console.log(`⚠️  HTTPS Redirect check not found in results`);
+                testsFailed++;
+            }
+
+        } catch (error) {
+            console.error('❌ Error verifying HTTPS redirect location:', error.message);
+            testsFailed++;
+        }
+
     } catch (error) {
         console.error('\n❌ Test execution failed:', error.message);
         testsFailed++;
@@ -384,6 +553,9 @@ async function runUITest() {
             await browser.close();
             console.log('\n🔒 Browser closed');
         }
+
+        // Stop the server
+        await stopServer();
     }
 
     // Summary
