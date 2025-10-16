@@ -46,7 +46,7 @@ This is a comprehensive web security analysis tool that evaluates websites for:
 - **Temporary tests**: Place in `./temp_tests/` (for ad-hoc verification)
 
 ### Build Files
-- **Builds**: the builds are placed in `./build/`. If the build is not representative of changes made in the code, rebuild the code with npm
+- **Builds**: the builds are placed in `./build/` and should never be directly edited. If the build is not representative of changes made in the code, rebuild the code with npm
 
 
 ### New Features
