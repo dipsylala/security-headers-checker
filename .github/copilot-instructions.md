@@ -80,6 +80,9 @@ npm run lint        # Check code style
 npm run lint:fix    # Auto-fix style issues
 ```
 
+## Testing
+When testing the UI, run it in a separate asyncronous process.
+
 ## Security Analysis Guidelines
 
 ### SSL Certificate Analysis (12 Tests, 175 Points)

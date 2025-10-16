@@ -6,6 +6,7 @@ const SOURCE_FILES = [
     'server.js',
 //    'package.json',
     'index.html',
+    'favicon.ico',
     'css/',
     'js/',
     'lib/',

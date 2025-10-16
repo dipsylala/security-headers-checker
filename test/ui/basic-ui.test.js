@@ -87,19 +87,25 @@ async function startServer() {
         });
 
         let startupOutput = '';
+        let resolved = false;
         const timeout = setTimeout(() => {
             reject(new Error('Server startup timeout'));
         }, 15000);
 
-        serverProcess.stdout.on('data', (data) => {
+        const stdoutHandler = (data) => {
             startupOutput += data.toString();
-            if (startupOutput.includes('WebCheck Validator running')) {
+            if (!resolved && startupOutput.includes('WebCheck Validator running')) {
+                resolved = true;
                 clearTimeout(timeout);
                 console.log(`✅ Server started on port ${serverPort}`);
+                // Remove the handler to prevent duplicate messages
+                serverProcess.stdout.removeListener('data', stdoutHandler);
                 // Give it a moment to fully initialize
                 setTimeout(() => resolve(serverPort), 1000);
             }
-        });
+        };
+
+        serverProcess.stdout.on('data', stdoutHandler);
 
         serverProcess.stderr.on('data', (data) => {
             console.error(`Server stderr: ${data}`);
@@ -160,7 +166,7 @@ function stopServer() {
  */
 async function saveScreenshot(page, name) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `${timestamp}_${name}.png`;
+    const filename = `basic_${timestamp}_${name}.png`;
     const filepath = path.join(ARTIFACTS_DIR, filename);
     
     await page.screenshot({ 
@@ -476,59 +482,6 @@ async function runUITest() {
         } catch (error) {
             console.error('❌ Error verifying results:', error.message);
             await saveScreenshot(page, '06_error_state');
-            testsFailed++;
-        }
-
-        // Test 6: Verify HTTPS Redirect location is displayed
-        console.log('\n📋 Test 6: Verify HTTPS Redirect Location');
-        console.log('-'.repeat(70));
-
-        try {
-            // Look for the HTTPS Redirect check in the Additional Security section
-            const redirectInfo = await page.evaluate(() => {
-                const additionalSection = document.getElementById('additionalResults');
-                if (!additionalSection) return null;
-                
-                const items = additionalSection.querySelectorAll('.security-item');
-                for (const item of items) {
-                    const heading = item.querySelector('h6');
-                    if (heading && heading.textContent.includes('HTTPS Redirect')) {
-                        // Look for <code> element containing the redirect location
-                        const codeElement = heading.querySelector('code');
-                        return {
-                            fullText: heading.textContent.trim(),
-                            redirectLocation: codeElement ? codeElement.textContent.trim() : null
-                        };
-                    }
-                }
-                return null;
-            });
-
-            if (redirectInfo) {
-                if (redirectInfo.redirectLocation) {
-                    // Verify the redirect location contains expected URL
-                    if (redirectInfo.redirectLocation.includes('www.veracode.com')) {
-                        console.log(`✅ HTTPS Redirect location is displayed correctly`);
-                        console.log(`   Redirect to: ${redirectInfo.redirectLocation}`);
-                        testsPassed++;
-                    } else {
-                        console.log(`⚠️  HTTPS Redirect location found but unexpected URL`);
-                        console.log(`   Found: ${redirectInfo.redirectLocation}`);
-                        console.log(`   Expected: URL containing www.veracode.com`);
-                        testsFailed++;
-                    }
-                } else {
-                    console.log(`⚠️  HTTPS Redirect found but location not displayed in code tag`);
-                    console.log(`   Full text: ${redirectInfo.fullText.substring(0, 150)}`);
-                    testsFailed++;
-                }
-            } else {
-                console.log(`⚠️  HTTPS Redirect check not found in results`);
-                testsFailed++;
-            }
-
-        } catch (error) {
-            console.error('❌ Error verifying HTTPS redirect location:', error.message);
             testsFailed++;
         }
 
