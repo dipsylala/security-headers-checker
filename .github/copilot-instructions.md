@@ -121,6 +121,8 @@ When working on this project:
 6. **Document security implications** - explain why checks matter
 7. **Use legitimate testing methods** - no pattern matching for security features
 8. **Maintain test coverage** - every feature needs integration tests
+9. **Use asynchronous tests** - start the web server in one process, and access it via a different process
+10. ** UI Tests should be self-contained and start their own server instance**
 
 ## Performance Targets
 
