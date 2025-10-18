@@ -1,4 +1,4 @@
-<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
+<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit [Copilot Customization](https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file) -->
 
 # WebCheck Validator
 
@@ -46,7 +46,7 @@ This is a comprehensive web security analysis tool that evaluates websites for:
 - **Temporary tests**: Place in `./temp_tests/` (for ad-hoc verification)
 
 ### Build Files
-- **Builds**: the builds are placed in `./build/`. If the build is not representative of changes made in the code, rebuild the code with npm
+- **Builds**: the builds are placed in `./build/` and should never be directly edited. If the build is not representative of changes made in the code, rebuild the code with npm
 
 
 ### New Features
@@ -79,6 +79,9 @@ node test/integration/badssl-scenarios.test.js # Certificate errors
 npm run lint        # Check code style
 npm run lint:fix    # Auto-fix style issues
 ```
+
+## Testing
+When testing the UI, run it in a separate asyncronous process.
 
 ## Security Analysis Guidelines
 
@@ -121,6 +124,8 @@ When working on this project:
 6. **Document security implications** - explain why checks matter
 7. **Use legitimate testing methods** - no pattern matching for security features
 8. **Maintain test coverage** - every feature needs integration tests
+9. **Use asynchronous tests** - start the web server in one process, and access it via a different process
+10. **UI Tests should be self-contained and start their own server instance**
 
 ## Performance Targets
 

@@ -7,12 +7,17 @@ const puppeteer = require('puppeteer');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 
 // Configuration
-const BASE_URL = 'http://localhost:4000' ;
+let BASE_URL = 'http://localhost:4000';
 const TEST_URL = 'https://veracode.com';
 const ARTIFACTS_DIR = path.join(__dirname, 'artifacts');
 const TIMEOUT = 60000; // 60 seconds for analysis to complete
+
+// Server process management
+let serverProcess = null;
+let serverPort = null;
 
 /**
  * Ensure artifacts directory exists
@@ -51,11 +56,117 @@ function cleanOldArtifacts() {
 }
 
 /**
+ * Find an available port
+ */
+function findAvailablePort() {
+    return new Promise((resolve, reject) => {
+        const server = require('net').createServer();
+        server.listen(0, () => {
+            const port = server.address().port;
+            server.close(() => resolve(port));
+        });
+        server.on('error', reject);
+    });
+}
+
+/**
+ * Start the application server on a random port
+ */
+async function startServer() {
+    serverPort = await findAvailablePort();
+    BASE_URL = `http://localhost:${serverPort}`;
+    
+    return new Promise((resolve, reject) => {
+        console.log(`🚀 Starting server on port ${serverPort}...`);
+        
+        const serverPath = path.join(__dirname, '..', '..', 'server.js');
+        serverProcess = spawn('node', [serverPath], {
+            env: { ...process.env, PORT: serverPort.toString() },
+            cwd: path.join(__dirname, '..', '..'),
+            stdio: ['ignore', 'pipe', 'pipe']
+        });
+
+        let startupOutput = '';
+        let resolved = false;
+        const timeout = setTimeout(() => {
+            reject(new Error('Server startup timeout'));
+        }, 15000);
+
+        const stdoutHandler = (data) => {
+            startupOutput += data.toString();
+            if (!resolved && startupOutput.includes('WebCheck Validator running')) {
+                resolved = true;
+                clearTimeout(timeout);
+                console.log(`✅ Server started on port ${serverPort}`);
+                // Remove the handler to prevent duplicate messages
+                serverProcess.stdout.removeListener('data', stdoutHandler);
+                // Give it a moment to fully initialize
+                setTimeout(() => resolve(serverPort), 1000);
+            }
+        };
+
+        serverProcess.stdout.on('data', stdoutHandler);
+
+        serverProcess.stderr.on('data', (data) => {
+            console.error(`Server stderr: ${data}`);
+        });
+
+        serverProcess.on('error', (error) => {
+            clearTimeout(timeout);
+            reject(new Error(`Failed to start server: ${error.message}`));
+        });
+
+        serverProcess.on('exit', (code) => {
+            if (code !== 0 && code !== null) {
+                clearTimeout(timeout);
+                reject(new Error(`Server exited with code ${code}`));
+            }
+        });
+    });
+}
+
+/**
+ * Stop the application server
+ */
+function stopServer() {
+    return new Promise((resolve) => {
+        if (!serverProcess) {
+            resolve();
+            return;
+        }
+
+        console.log('🛑 Stopping server...');
+        
+        serverProcess.on('exit', () => {
+            console.log('✅ Server stopped');
+            serverProcess = null;
+            resolve();
+        });
+
+        // Kill the process
+        if (process.platform === 'win32') {
+            spawn('taskkill', ['/pid', serverProcess.pid.toString(), '/f', '/t']);
+        } else {
+            serverProcess.kill('SIGTERM');
+        }
+
+        // Force kill after 5 seconds if still running
+        setTimeout(() => {
+            if (serverProcess) {
+                serverProcess.kill('SIGKILL');
+                serverProcess = null;
+                resolve();
+            }
+        }, 5000);
+    });
+}
+
+/**
  * Save screenshot with timestamp
  */
 async function saveScreenshot(page, name) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `${timestamp}_${name}.png`;
+    const filename = `basic_${timestamp}_${name}.png`;
     const filepath = path.join(ARTIFACTS_DIR, filename);
     
     await page.screenshot({ 
@@ -111,7 +222,6 @@ async function runUITest() {
     console.log('\n' + '='.repeat(70));
     console.log('🖥️  WebCheck Validator - UI Test Suite');
     console.log('='.repeat(70));
-    console.log(`📍 Base URL: ${BASE_URL}`);
     console.log(`🎯 Test Target: ${TEST_URL}`);
     console.log(`📁 Artifacts: ${ARTIFACTS_DIR}`);
     console.log('='.repeat(70));
@@ -126,6 +236,19 @@ async function runUITest() {
     const startTime = Date.now();
 
     try {
+        // Test 0: Start server on random port
+        console.log('\n📋 Test 0: Start Test Server');
+        console.log('-'.repeat(70));
+        try {
+            await startServer();
+            console.log(`✅ Server started successfully on ${BASE_URL}`);
+            testsPassed++;
+        } catch (error) {
+            console.error('❌ Failed to start server:', error.message);
+            testsFailed++;
+            throw new Error('Cannot start server - cannot proceed with UI tests');
+        }
+
         // Test 1: Check server health
         console.log('\n📋 Test 1: Server Health Check');
         console.log('-'.repeat(70));
@@ -135,9 +258,8 @@ async function runUITest() {
             testsPassed++;
         } catch (error) {
             console.error('❌ Server health check failed:', error.message);
-            console.error('💡 Make sure to start the server first: npm start');
             testsFailed++;
-            throw new Error('Server not available - cannot proceed with UI tests');
+            throw new Error('Server not healthy - cannot proceed with UI tests');
         }
 
         // Test 2: Launch browser and load page
@@ -384,6 +506,9 @@ async function runUITest() {
             await browser.close();
             console.log('\n🔒 Browser closed');
         }
+
+        // Stop the server
+        await stopServer();
     }
 
     // Summary

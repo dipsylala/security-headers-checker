@@ -37,6 +37,11 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Handle favicon.ico requests gracefully (prevent 404 errors in logs)
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end(); // 204 No Content
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({
