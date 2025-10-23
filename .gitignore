@@ -127,3 +127,4 @@ logs
 .veracode_packaging/
 .veracode_pipeline/
 .veracode_consultation/
+.veracode_sca/

@@ -72,8 +72,6 @@ app.post('/api/analyze', async (req, res) => {
             });
         }
 
-        logger.info(`Starting analysis for URL: ${url.substring(0, 100)}${url.length > 100 ? '...' : ''}`);
-
         // Step 1: Validate URL
         const urlValidation = validateUrl(url);
         if (!urlValidation.valid) {
@@ -87,6 +85,8 @@ app.post('/api/analyze', async (req, res) => {
                 ]
             });
         }
+
+        logger.info(`Starting analysis for URL: ${url.substring(0, 100)}${url.length > 100 ? '...' : ''}`);
 
         const validatedUrl = urlValidation.url;
         const urlAssessment = getUrlSecurityAssessment(validatedUrl);
