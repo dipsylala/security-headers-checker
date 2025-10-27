@@ -996,6 +996,11 @@ class SecurityChecker {
                 ? check.details.split('\n').map(line => `<div>${this.escapeHtml(line)}</div>`).join('')
                 : '';
 
+            // Add redirect URL if present (for HTTPS Redirect check)
+            const redirectInfo = check.redirectUrl 
+                ? `<div class="mt-2">Redirects to: <code>${this.escapeHtml(check.redirectUrl)}</code></div>`
+                : '';
+
             return `
                 <div class="security-item ${check.status}">
                     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1008,6 +1013,7 @@ class SecurityChecker {
                     
                     <p class="mb-2 text-muted">${check.description}</p>
                     <div class="text-dark">${formattedDetails}</div>
+                    ${redirectInfo}
                 </div>
             `;
         }).join('');
